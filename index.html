@@ -53,6 +53,21 @@
       <p>Busca capa, sinopse, ano, gênero e diretor para todos os filmes que ainda não têm dados. Confira depois se algum foi associado ao filme errado.</p>
       <div class="row"><button class="btn pri" id="enrich">Buscar dados de todos</button></div>
     </div>
+    <div class="panel" id="cloud">
+      <h2>☁️ Conta e sincronização</h2>
+      <p id="cloudOff">Sincronização não configurada. Preencha o arquivo config.js (veja o README).</p>
+      <div id="authIn" hidden>
+        <p>Entre para guardar sua lista na nuvem e acessá-la em qualquer aparelho.</p>
+        <input type="text" id="email" placeholder="E-mail" autocomplete="email" inputmode="email">
+        <input type="password" id="pass" placeholder="Senha (mínimo de 6 caracteres)" autocomplete="current-password" style="margin-top:8px">
+        <div class="row" style="margin-top:8px"><button class="btn pri" id="inBtn">Entrar</button><button class="btn" id="upBtn">Criar conta</button></div>
+      </div>
+      <div id="authOut" hidden>
+        <p>Conectado como <b id="who"></b></p>
+        <div class="row"><button class="btn" id="outBtn">Sair</button></div>
+      </div>
+      <div class="stats" id="syncMsg"></div>
+    </div>
     <div class="panel">
       <h2>💾 Backup</h2>
       <p>Seus filmes e notas ficam salvos neste navegador. Exporte um backup para guardar ou levar para outro aparelho.</p>
@@ -62,6 +77,8 @@
   </section>
   <footer class="stats" style="text-align:center;font-size:.78rem">Este produto usa a API do TMDB, mas não é endossado nem certificado pelo TMDB.</footer>
 </main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" defer></script>
+<script src="config.js"></script>
 <script src="app.js" defer></script>
 </body>
 </html>

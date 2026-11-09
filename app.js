@@ -1,7 +1,8 @@
 const KEY='roleta-cinema-v2', TAU=Math.PI*2, IMG='https://image.tmdb.org/t/p/';
 const SEED=["Whiplash","Amélie Poulain","Green Book","V de Vingança","Harry Potter e a Pedra Filosofal","Harry Potter e a Câmara Secreta","Harry Potter e o Prisioneiro de Azkaban","Harry Potter e o Cálice de Fogo","Harry Potter e a Ordem da Fênix","Harry Potter e o Enigma do Príncipe","Harry Potter e as Relíquias da Morte: Parte 1","Harry Potter e as Relíquias da Morte: Parte 2","Gran Torino","O Grande Hotel Budapeste","Ford vs Ferrari","Parasita","O Iluminado","O Sexto Sentido","O Poderoso Chefão","O Poderoso Chefão II","O Poderoso Chefão III","À Espera de um Milagre","Kill Bill","Efeito Borboleta","Brilho Eterno de uma Mente sem Lembranças","A Caça","O Labirinto do Fauno","Sociedade dos Poetas Mortos","A Outra História Americana","O Grande Truque","Quem Quer Ser um Milionário?","As Aventuras de Pi","Tenet"];
 const $=s=>document.querySelector(s);
-const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const uid=()=>crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);});
+const isUuid=v=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 function hsl2hex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));const x=v=>Math.round(255*v).toString(16).padStart(2,'0');return '#'+x(f(0))+x(f(8))+x(f(4));}
 const randColor=()=>hsl2hex(Math.floor(Math.random()*360),62,38);
 const txtColor=h=>{const n=parseInt(h.slice(1),16);return ((n>>16)*.299+((n>>8)&255)*.587+(n&255)*.114)>150?'#111':'#fff';};
@@ -10,9 +11,10 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 let state;
 function load(){
   try{const r=localStorage.getItem(KEY);if(r){const s=JSON.parse(r);if(s&&Array.isArray(s.movies))return s;}}catch(e){}
-  return {incWatched:false,key:'',movies:SEED.map((t,i)=>({id:uid()+i,title:t,color:hsl2hex(i*360/SEED.length,62,38),watched:false,rating:0,note:'',tmdb:null}))};
+  return {incWatched:false,key:'',movies:SEED.map((t,i)=>({id:uid(),title:t,color:hsl2hex(i*360/SEED.length,62,38),watched:false,rating:0,note:'',tmdb:null}))};
 }
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+function save(){saveLocal();schedulePush();}
 state=load();
 const pool=()=>state.movies.filter(m=>state.incWatched||!m.watched);
 const byId=id=>state.movies.find(m=>m.id===id);
@@ -99,7 +101,8 @@ function renderList(){
         <button class="x" data-act="del" data-id="${m.id}" title="Excluir">🗑</button></div></div>
     </div></div>`).join(''):'<div class="stats">Nenhum filme aqui ainda.</div>';
 }
-function refresh(){save();draw();renderPoolInfo();renderList();renderResult();}
+function refreshUI(){draw();renderPoolInfo();renderList();renderResult();}
+function refresh(){save();refreshUI();}
 
 /* ---------- Adicionar / buscar ---------- */
 let found=[];
@@ -179,10 +182,64 @@ $('#exp').addEventListener('click',()=>{
 $('#imp').addEventListener('click',()=>$('#file').click());
 $('#file').addEventListener('change',async e=>{
   const f=e.target.files[0];if(!f)return;
-  try{const s=JSON.parse(await f.text());if(!Array.isArray(s.movies))throw 0;state={...s,key:state.key};refresh();msg('Backup importado.');}
+  try{const s=JSON.parse(await f.text());if(!Array.isArray(s.movies))throw 0;s.movies.forEach(m=>{if(!isUuid(m.id))m.id=uid();});state={...s,key:state.key};refresh();msg('Backup importado.');}
   catch(err){msg('Arquivo de backup inválido.');}
   e.target.value='';
 });
 
 $('#inc').checked=state.incWatched;$('#key').value=state.key||'';$('#newColor').value=randColor();
 size();renderPoolInfo();renderList();
+
+/* ---------- Nuvem (Supabase) ---------- */
+let sb=null,user=null,pushTimer=null,cloudIds=new Set();
+const setSync=t=>{const el=$('#syncMsg');if(el)el.textContent=t;};
+const toRow=(m,i)=>({id:m.id,user_id:user.id,pos:i,title:m.title,color:m.color,watched:!!m.watched,rating:m.rating||0,note:m.note||'',tmdb:m.tmdb||null,miss:!!m.miss});
+const fromRow=r=>({id:r.id,title:r.title,color:r.color,watched:r.watched,rating:r.rating,note:r.note||'',tmdb:r.tmdb||null,miss:r.miss});
+function schedulePush(){if(!sb||!user)return;clearTimeout(pushTimer);setSync('⏳ Salvando…');pushTimer=setTimeout(pushAll,800);}
+async function pushAll(){
+  if(!sb||!user)return;
+  try{
+    if(state.movies.length){const {error}=await sb.from('movies').upsert(state.movies.map(toRow));if(error)throw error;}
+    const gone=[...cloudIds].filter(id=>!state.movies.some(m=>m.id===id));
+    if(gone.length){const {error}=await sb.from('movies').delete().in('id',gone);if(error)throw error;}
+    cloudIds=new Set(state.movies.map(m=>m.id));setSync('☁️ Salvo na nuvem');
+  }catch(e){setSync('⚠️ Erro ao salvar: '+(e.message||e));}
+}
+async function pullCloud(){
+  setSync('⏳ Carregando sua lista…');
+  const {data,error}=await sb.from('movies').select('*').order('pos');
+  if(error){setSync('⚠️ '+error.message);return;}
+  if(data.length){
+    state.movies=data.map(fromRow);cloudIds=new Set(data.map(r=>r.id));lastId=null;
+    saveLocal();refreshUI();setSync('☁️ Lista sincronizada');
+  }else{
+    state.movies.forEach(m=>{if(!isUuid(m.id))m.id=uid();});
+    await pushAll();saveLocal();setSync('☁️ Sua lista foi enviada para a nuvem');
+  }
+}
+function renderAuth(){
+  $('#cloudOff').hidden=!!sb;
+  $('#authIn').hidden=!sb||!!user;
+  $('#authOut').hidden=!sb||!user;
+  $('#who').textContent=user?user.email:'';
+}
+async function authDo(kind){
+  const email=$('#email').value.trim(),password=$('#pass').value;
+  if(!email||password.length<6){setSync('Informe e-mail e senha (mínimo de 6 caracteres).');return;}
+  setSync('⏳ Aguarde…');
+  const {data,error}=await(kind==='up'?sb.auth.signUp({email,password}):sb.auth.signInWithPassword({email,password}));
+  if(error){setSync('❌ '+error.message);return;}
+  if(kind==='up'&&!data.session)setSync('📧 Conta criada! Confirme pelo e-mail que você recebeu e depois toque em Entrar.');
+}
+if(window.supabase&&/^https:\/\//.test(window.SUPABASE_URL||'')&&window.SUPABASE_KEY&&!/COLE/.test(window.SUPABASE_KEY)){
+  sb=window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_KEY);
+  sb.auth.onAuthStateChange((ev,session)=>{
+    user=session?session.user:null;renderAuth();
+    if(user&&(ev==='INITIAL_SESSION'||ev==='SIGNED_IN'))setTimeout(pullCloud,0);
+    if(!user){cloudIds=new Set();if(ev==='SIGNED_OUT')setSync('Você saiu da conta.');}
+  });
+  $('#inBtn').addEventListener('click',()=>authDo('in'));
+  $('#upBtn').addEventListener('click',()=>authDo('up'));
+  $('#outBtn').addEventListener('click',()=>sb.auth.signOut());
+}
+renderAuth();
