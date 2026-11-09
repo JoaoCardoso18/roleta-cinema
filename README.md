@@ -1,0 +1,63 @@
+# 🎬 Roleta Cinema
+
+Uma roleta para sortear o próximo filme da sua lista. Você monta a própria coleção, busca capa e sinopse automaticamente, marca o que já assistiu e dá nota a cada filme.
+
+> Feito com HTML, CSS e JavaScript puro, sem frameworks e sem servidor. Funciona no celular e no computador.
+
+## ✨ Funcionalidades
+
+- 🎡 Roleta em `<canvas>` com animação, responsiva e adaptada para toque
+- 🔎 Busca de filmes pela API do [TMDB](https://www.themoviedb.org/) (capa, sinopse, ano, gênero, duração e diretor)
+- ⭐ Nota de 1 a 5 estrelas, anotações e marcação de "assistido"
+- 🎨 Cor personalizada para cada filme na roleta
+- 🎯 A roleta sorteia só os filmes que você ainda não viu (opção para incluir os assistidos)
+- 💾 Dados salvos no navegador (`localStorage`) com exportação e importação de backup em JSON
+- 🌗 Tema claro e escuro automáticos
+
+## 🚀 Como usar
+
+1. Abra o site (ou o `index.html` no navegador).
+2. Crie uma conta gratuita no TMDB e copie seu **Token de Leitura da API** em *Configurações → API*.
+3. Vá na aba **⚙️ Ajustes**, cole o token e toque em **Salvar e testar**.
+4. Use **Buscar dados de todos** para preencher as capas e sinopses da lista inicial.
+
+A chave **não** fica no código: ela é digitada por você e guardada só no seu navegador.
+
+## 💻 Rodar localmente
+
+```bash
+git clone https://github.com/SEU-USUARIO/roleta-cinema.git
+cd roleta-cinema
+python3 -m http.server 8000   # ou abra o index.html direto no navegador
+```
+
+Depois acesse http://localhost:8000.
+
+## 🌐 Publicar com GitHub Pages
+
+*Settings → Pages → Source: Deploy from a branch → Branch: `main` / `(root)` → Save.*
+O site fica em `https://SEU-USUARIO.github.io/roleta-cinema/`.
+
+## 🗂️ Estrutura
+
+```
+├── index.html   # estrutura da página
+├── style.css    # estilos (tema claro/escuro, layout responsivo)
+├── app.js       # roleta, integração com o TMDB, lista e backup
+├── README.md
+└── LICENSE
+```
+
+## 🛣️ Próximos passos
+
+- [ ] Sincronizar a lista entre aparelhos (Supabase ou Firebase)
+- [ ] Listas por categoria (terror, família, clássicos…)
+- [ ] Nota de 0 a 10 e ordenação por nota
+- [ ] Trocar o filme associado quando o TMDB trouxer o errado
+- [ ] Modo PWA (instalar no celular e usar offline)
+
+## 📄 Créditos e licença
+
+Dados de filmes fornecidos pelo [TMDB](https://www.themoviedb.org/). Este produto usa a API do TMDB, mas não é endossado nem certificado pelo TMDB.
+
+Código sob licença [MIT](LICENSE).
