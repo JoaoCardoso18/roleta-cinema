@@ -272,6 +272,23 @@ label.check,label.cl{display:flex;align-items:center;gap:8px;cursor:pointer;font
 .edform .acts{display:flex;gap:8px}
 .edform .acts .btn{flex:1}
 
+/* Franquias */
+.frnote{margin-top:10px;display:flex;flex-direction:column;gap:6px;text-align:left}
+.frh{display:flex;justify-content:space-between;gap:8px;font-size:.84rem}
+.frh span{color:var(--muted)}
+.frnote .bar{height:6px;background:var(--surface2);border-radius:99px;overflow:hidden}
+.frnote .bar i{display:block;height:100%;background:#4fb477}
+.fro{list-style:none;margin:0;padding:0;max-height:150px;overflow:auto;font-size:.84rem}
+.fro li{display:flex;gap:8px;padding:3px 6px;border-radius:6px;align-items:center}
+.fro .n{width:18px;text-align:right;color:var(--muted)}
+.fro .tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fro .st{font-size:.72rem;font-weight:600;color:var(--muted)}
+.fro li.done .tt{text-decoration:line-through;color:var(--muted)}
+.fro li.next{outline:1px solid var(--gold);background:color-mix(in srgb,var(--gold) 12%,transparent)}
+.fro li.next .st{color:var(--gold)}
+#frOffer{display:flex;flex-direction:column;gap:8px}
+#frOffer p{margin:0}
+
 /* Conta */
 #t-conta .box{display:flex;flex-direction:column;gap:8px}
 #t-conta .seg{align-self:stretch}

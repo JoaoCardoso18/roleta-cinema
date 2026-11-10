@@ -73,6 +73,10 @@
           <button class="btn" data-f="todo">Quero ver</button>
           <button class="btn" data-f="done">Assistidos</button>
         </div>
+        <div class="box" id="frOffer" hidden>
+          <p id="frOfferTxt"></p>
+          <div class="row"><button class="btn pri" id="frAddBtn" data-act="fr-add">Adicionar</button><button class="btn" data-act="fr-skip">Agora não</button></div>
+        </div>
         <div class="stats" id="stats"></div>
         <div class="list" id="list"></div>
       </section>
@@ -143,6 +147,11 @@
       </section>
 
       <section class="pb" id="t-ajustes">
+        <div class="box">
+          <h2><svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 4M12 12L5 16"/></svg>Roleta</h2>
+          <label class="check"><input type="checkbox" id="frOn"> Agrupar as franquias na roleta</label>
+          <p class="stats">Os filmes de uma mesma franquia ficam espalhados entre os outros, com uma fatia por filme. Se cair uma delas, o resultado indica por qual filme começar.</p>
+        </div>
         <div class="box">
           <h2><svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 100 18c1.4 0 2-1 1.5-2.2-.5-1.2.3-2.3 1.6-2.3H17a4 4 0 004-4c0-5-4-9.5-9-9.5z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>Aparência</h2>
           <p>Escolha um tema pronto ou monte o seu em “Customizado”. Fica salvo neste aparelho.</p>

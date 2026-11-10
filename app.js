@@ -31,8 +31,8 @@ const THEMES=[
 const CKEYS=[['bg','Fundo do site'],['surface','Painéis e cards'],['fg','Texto'],['accent','Botões e seta'],['gold','Aro e detalhes'],['w1','Roleta, fatia A'],['w2','Roleta, fatia B']];
 const darken=(h,f)=>{const n=parseInt(h.slice(1),16),c=v=>Math.round(v*(1-f)).toString(16).padStart(2,'0');return '#'+c(n>>16)+c((n>>8)&255)+c(n&255);};
 const seed=t=>({bg:t.bg,surface:t.surface,fg:t.fg,accent:t.accent,gold:t.gold,w1:t.accent,w2:darken(t.accent,.24)});
-let ui={theme:'cinema',mode:'wheel',custom:seed(THEMES[0])};
-try{const u=JSON.parse(localStorage.getItem(UIKEY)||'{}');if(u.theme)ui.theme=u.theme;if(u.mode==='list')ui.mode='list';if(u.custom&&u.custom.bg)ui.custom=Object.assign(ui.custom,u.custom);}catch(e){}
+let ui={theme:'cinema',mode:'wheel',custom:seed(THEMES[0]),fr:true,skipCols:[]};
+try{const u=JSON.parse(localStorage.getItem(UIKEY)||'{}');if(u.theme)ui.theme=u.theme;if(u.mode==='list')ui.mode='list';if(u.fr===false)ui.fr=false;if(Array.isArray(u.skipCols))ui.skipCols=u.skipCols.slice(0,200);if(u.custom&&u.custom.bg)ui.custom=Object.assign(ui.custom,u.custom);}catch(e){}
 if(ui.theme!=='custom'&&!THEMES.some(t=>t.id===ui.theme))ui.theme='cinema';
 function renderThemes(){
   $('#themes').innerHTML=THEMES.map(t=>`<button class="theme${t.id===ui.theme?' sel':''}" data-act="theme" data-t="${t.id}"><span class="sw3">${[t.bg,t.accent,t.gold].map(c=>`<i style="background:${c}"></i>`).join('')}</span>${t.name}</button>`).join('')
@@ -65,9 +65,22 @@ async function tm(path,params={}){
   const opt={};if(k.length>40)opt.headers={Authorization:'Bearer '+k};else u.searchParams.set('api_key',k);
   const r=await fetch(u,opt);if(!r.ok)throw new Error(String(r.status));return r.json();
 }
+const cleanCol=n=>String(n||'').replace(/\s*[-–]\s*(Cole[cç][aã]o|Collection|Saga)\s*$/i,'').replace(/^(Cole[cç][aã]o|Saga)\s+/i,'').trim();
+const colCache={};
+async function collectionInfo(id){
+  if(colCache[id])return colCache[id];
+  const c=await tm('/collection/'+id),today=new Date().toISOString().slice(0,10);
+  const parts=(c.parts||[]).filter(p=>p.release_date&&p.release_date<=today).sort((x,y)=>x.release_date.localeCompare(y.release_date)||x.id-y.id);
+  return colCache[id]={id:c.id||id,name:cleanCol(c.name),parts};
+}
 async function details(id){
   const d=await tm('/movie/'+id,{append_to_response:'credits'});
-  return {id:d.id,poster:d.poster_path,backdrop:d.backdrop_path||null,overview:d.overview||'',year:(d.release_date||'').slice(0,4),genres:(d.genres||[]).map(g=>g.name),runtime:d.runtime||null,vote:d.vote_average?+d.vote_average.toFixed(1):null,director:((d.credits&&d.credits.crew)||[]).filter(c=>c.job==='Director').map(c=>c.name).slice(0,2).join(', ')};
+  let col=null;
+  if(d.belongs_to_collection){
+    try{const c=await collectionInfo(d.belongs_to_collection.id),i=c.parts.findIndex(p=>p.id===d.id);col={id:c.id,name:c.name,n:i>=0?i+1:null,total:c.parts.length};}
+    catch(e){col={id:d.belongs_to_collection.id,name:cleanCol(d.belongs_to_collection.name),n:null,total:null};}
+  }
+  return {col,id:d.id,poster:d.poster_path,backdrop:d.backdrop_path||null,overview:d.overview||'',year:(d.release_date||'').slice(0,4),genres:(d.genres||[]).map(g=>g.name),runtime:d.runtime||null,vote:d.vote_average?+d.vote_average.toFixed(1):null,director:((d.credits&&d.credits.crew)||[]).filter(c=>c.job==='Director').map(c=>c.name).slice(0,2).join(', ')};
 }
 const infoLine=t=>t?[t.year,(t.genres||[]).slice(0,3).join(', '),t.runtime?t.runtime+' min':'',t.director?'Dir. '+t.director:'',t.vote?'TMDB ★ '+t.vote:''].filter(Boolean).join(' · '):'';
 
@@ -79,6 +92,32 @@ const chips=t=>t&&t.genres&&t.genres.length?`<div class="chips">${t.genres.map(g
 const IC={cloud:'<svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 010-8 5.5 5.5 0 0110.6 1.4A3.3 3.3 0 0117 18z"/></svg>',film:'<svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg>',trash:'<svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>'};
 const idle=(a,b)=>`<div class="rc idle"><div class="rbody"><small class="kick">${a}</small><h2>${b}</h2></div></div>`;
 
+/* ---------- Franquias: uma fatia por filme, espalhadas entre os demais ---------- */
+const colOf=m=>(ui.fr!==false&&m.tmdb&&m.tmdb.col)||null;
+const ordOf=m=>m.tmdb.col.n||+m.tmdb.year||0;
+const FRC=['#b98a2b','#2f7f86','#7a4fb0','#a0522d'];
+const frColor=(f,def)=>FRC[Math.abs(+f.id||0)%FRC.length]||def;
+let slotMemo={sig:'',list:[]};
+function slots(){
+  const P=pool(),g={};
+  P.forEach(m=>{const c=colOf(m);if(c)(g[c.id]=g[c.id]||{id:c.id,name:c.name,mem:[]}).mem.push(m);});
+  const groups=Object.values(g).filter(x=>x.mem.length>1),gid=new Set(groups.map(x=>String(x.id)));
+  groups.forEach(x=>x.mem.sort((p,q)=>ordOf(p)-ordOf(q)));
+  const inG=m=>{const c=colOf(m);return !!c&&gid.has(String(c.id));};
+  const sig=P.map(m=>m.id+(inG(m)?'f':'')).join(',')+'|'+groups.map(x=>x.mem.map(m=>m.id).join('.')).join(';');
+  if(slotMemo.sig===sig)return slotMemo.list;
+  const singles=P.filter(m=>!inG(m)).map(m=>({key:m.id,m}));
+  const N=singles.length+groups.reduce((t,x)=>t+x.mem.length,0),sl=new Array(N).fill(null);
+  groups.forEach((x,k)=>{
+    for(let j=0;j<x.mem.length;j++){
+      const p=Math.min(N-1,Math.floor((j+.5)*N/x.mem.length+k*.37));
+      for(let d=0,t=0;t<N*2;t++){const i=((p+d)%N+N)%N;if(sl[i]===null){sl[i]={key:'fr'+x.id,fr:x,m:x.mem[0]};break;}d=d>0?-d:-d+1;}
+    }
+  });
+  let si=0;const list=sl.map(v=>v||singles[si++]);
+  slotMemo={sig,list};return list;
+}
+
 /* ---------- Roleta ---------- */
 const cv=$('#c'),ctx=cv.getContext('2d'),btn=$('#spin');
 let rot=0,spinning=false,lastId=null,tick=0;
@@ -86,7 +125,7 @@ function fit(){if(ui.mode==='list'){fitReel();return;}const w=$('#stagewrap'),cs
 function size(){const r=cv.getBoundingClientRect();if(r.width<10)return;const d=Math.min(window.devicePixelRatio||1,2.5);cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);draw();}
 function draw(){
   const W=cv.width;if(W<20)return;
-  const R=W/2,P=pool(),n=P.length,cs=getComputedStyle(document.documentElement);
+  const R=W/2,S=slots(),n=S.length,cs=getComputedStyle(document.documentElement);
   const w1=cs.getPropertyValue('--w1').trim()||'#c8102e',w2=cs.getPropertyValue('--w2').trim()||'#a00d25';
   const rim=cs.getPropertyValue('--rim').trim()||'#1a1216',gold=cs.getPropertyValue('--gold').trim()||'#e0b84c';
   const Rs=R*.88;
@@ -105,13 +144,13 @@ function draw(){
     ctx.restore();return;
   }
   const a=TAU/n;
-  P.forEach((m,i)=>{
+  S.forEach((sl,i)=>{
     const s=rot+i*a;
     ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,Rs,s,s+a);ctx.closePath();
-    const sc=i%2?w2:w1;ctx.fillStyle=sc;ctx.fill();ctx.strokeStyle='rgba(255,255,255,.3)';ctx.lineWidth=Math.max(1,W/420);ctx.stroke();
+    const sc=sl.fr?frColor(sl.fr,gold):(i%2?w2:w1);ctx.fillStyle=sc;ctx.fill();ctx.strokeStyle='rgba(255,255,255,.3)';ctx.lineWidth=Math.max(1,W/420);ctx.stroke();
     ctx.save();ctx.rotate(s+a/2);ctx.textAlign='right';ctx.textBaseline='middle';
     const maxW=Rs*.62;let fs=Math.max(Math.min(W*.036,Rs*Math.sin(Math.min(a,Math.PI)/2)*1.25),W*.022);
-    ctx.font=`600 ${fs}px system-ui,sans-serif`;let t=m.title;
+    ctx.font=`600 ${fs}px system-ui,sans-serif`;let t=sl.fr?'Franquia '+sl.fr.name:sl.m.title;
     while(ctx.measureText(t).width>maxW&&fs>W*.02){fs-=1;ctx.font=`600 ${fs}px system-ui,sans-serif`;}
     if(ctx.measureText(t).width>maxW){while(t.length>3&&ctx.measureText(t+'…').width>maxW)t=t.slice(0,-1);t+='…';}
     const tc=txtColor(sc);ctx.fillStyle=tc;ctx.shadowColor=tc==='#fff'?'rgba(0,0,0,.5)':'rgba(255,255,255,.4)';ctx.shadowBlur=3;
@@ -133,7 +172,7 @@ function confetti(){
   })(t0);
 }
 function spin(){
-  const P=pool(),n=P.length;if(spinning||!n)return;
+  const P=slots(),n=P.length;if(spinning||!n)return;
   lock(true);
   const a=TAU/n,idx=Math.floor(Math.random()*n),off=(Math.random()-.5)*a*.7;
   const final=-(idx+.5)*a+off;
@@ -147,13 +186,14 @@ function spin(){
   })(t0);
 }
 const lock=v=>{spinning=v;const off=v||!pool().length;btn.disabled=off;$('#spin2').disabled=off;};
-function finish(m){lastId=m.id;renderResult(true);confetti();if(navigator.vibrate)try{navigator.vibrate(200)}catch(e){}}
+let lastFr=null;
+function finish(sl){lastId=sl.m.id;lastFr=sl.fr?sl.fr.id:null;renderResult(true);confetti();if(navigator.vibrate)try{navigator.vibrate(200)}catch(e){}}
 function go(){if(spinning)return;ui.mode==='list'?spinList():spin();}
 
 /* ---------- Modelo "Lista": a faixa desce e para no filme sorteado ---------- */
 const RH=68;
-const rowHTML=m=>{const t=m.tmdb,sub=[t&&t.year,t&&(t.genres||[]).slice(0,2).join(', ')].filter(Boolean).join(' · ');
-  return `<div class="ri"><div class="rcv">${t&&t.poster?`<img src="${IMG}w154${t.poster}" alt="">`:`<div class="ph" style="--c:${esc(m.color)}"></div>`}</div><div class="rtx"><b>${esc(m.title)}</b>${sub?`<span>${esc(sub)}</span>`:''}</div></div>`;};
+const rowHTML=sl=>{const m=sl.m,t=m.tmdb,sub=sl.fr?sl.fr.mem.length+' filmes na roleta':[t&&t.year,t&&(t.genres||[]).slice(0,2).join(', ')].filter(Boolean).join(' · ');
+  return `<div class="ri"><div class="rcv">${t&&t.poster?`<img src="${IMG}w154${t.poster}" alt="">`:`<div class="ph" style="--c:${esc(m.color)}"></div>`}</div><div class="rtx"><b>${esc(sl.fr?'Franquia '+sl.fr.name:m.title)}</b>${sub?`<span>${esc(sub)}</span>`:''}</div></div>`;};
 const tyFor=i=>$('#reel').clientHeight/2-(i+.5)*RH;
 function fitReel(){
   if(ui.mode!=='list')return;
@@ -161,10 +201,10 @@ function fitReel(){
   $('#reel').style.height=n*RH+'px';renderIdleReel();
 }
 let reelSig='',reelIdx=4;
-const poolSig=()=>pool().map(m=>m.id).join(',');
+const poolSig=()=>slots().map(s=>s.key).join(',');
 function renderIdleReel(){
   if(spinning||ui.mode!=='list')return;
-  const P=pool(),st=$('#strip'),sig=poolSig();
+  const P=slots(),st=$('#strip'),sig=poolSig();
   if(!P.length){st.innerHTML=`<div class="ri none"><b>${state.movies.length?'Nenhum filme com esses filtros':'Sua lista está vazia'}</b></div>`;st.style.transform=`translateY(${$('#reel').clientHeight/2-RH/2}px)`;reelSig='';return;}
   if(sig!==reelSig||!st.children.length){
     let arr=P.slice();while(arr.length<12)arr=arr.concat(P);
@@ -173,12 +213,12 @@ function renderIdleReel(){
   st.style.transform=`translateY(${tyFor(reelIdx)}px)`;
 }
 function spinList(){
-  const P=pool();if(spinning||!P.length)return;
+  const P=slots();if(spinning||!P.length)return;
   lock(true);setBackdrop(null);$('#res').innerHTML=idle('Girando…',IC.film);
   const win=P[Math.floor(Math.random()*P.length)],L=Math.max(45,P.length*2),W=4,arr=[];let prev=null;
-  for(let i=0;i<L;i++){let m;do{m=P[Math.floor(Math.random()*P.length)];}while(P.length>1&&m===prev);arr.push(m);prev=m;}
+  for(let i=0;i<L;i++){let m;do{m=P[Math.floor(Math.random()*P.length)];}while(P.length>1&&prev&&m.key===prev.key);arr.push(m);prev=m;}
   arr[W]=win;
-  if(P.length>1)[W-1,W+1].forEach(j=>{while(arr[j]===win)arr[j]=P[Math.floor(Math.random()*P.length)];});
+  if(P.length>1)[W-1,W+1].forEach(j=>{while(arr[j].key===win.key)arr[j]=P[Math.floor(Math.random()*P.length)];});
   const st=$('#strip');st.innerHTML=arr.map(rowHTML).join('');
   const from=tyFor(L-4),to=tyFor(W),t0=performance.now(),dur=(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)?300:5200;
   st.style.transform=`translateY(${from}px)`;
@@ -202,19 +242,28 @@ function setBackdrop(m){
   else bd.classList.remove('on');
 }
 async function ensureBackdrop(m){
-  if(!m.tmdb||m.tmdb.backdrop!==undefined||!tkey())return;
+  if(!m.tmdb||(m.tmdb.backdrop!==undefined&&m.tmdb.col!==undefined)||!tkey())return;
   try{const d=await details(m.tmdb.id);m.tmdb=d;save();if(lastId===m.id&&!spinning)setBackdrop(m);renderModal();}catch(e){}
+}
+function frNote(c){
+  const mem=state.movies.filter(x=>x.tmdb&&x.tmdb.col&&String(x.tmdb.col.id)===String(c.id)).sort((p,q)=>ordOf(p)-ordOf(q));
+  const done=mem.filter(x=>x.watched).length,total=Math.max(c.total||0,mem.length),nx=mem.find(x=>!x.watched),miss=total-mem.length;
+  return `<div class="frnote"><div class="frh"><b>Franquia ${esc(c.name)}</b><span>${done} de ${total} assistidos</span></div>
+    <div class="bar" aria-hidden="true"><i style="width:${total?done/total*100:0}%"></i></div>
+    <ul class="fro">${mem.map(x=>`<li class="${x.watched?'done':x===nx?'next':''}"><span class="n">${x.tmdb.col.n||''}</span><span class="tt">${esc(x.title)}</span><span class="st">${x.watched?'Assistido':x===nx?'Comece por aqui':''}</span></li>`).join('')}</ul>
+    ${miss>0?`<div class="stats">${miss} filme${miss>1?'s':''} da franquia ainda fora da sua lista.</div>`:''}</div>`;
 }
 function renderResult(anim){
   const m=lastId&&byId(lastId);if(!m||spinning)return;const t=m.tmdb;
   setBackdrop(m);ensureBackdrop(m);
+  const frBlock=(lastFr&&t&&t.col&&String(t.col.id)===String(lastFr))?frNote(t.col):'';
   $('#lastp').textContent=m.title+(t&&t.year?' ('+t.year+')':'');
   $('#res').innerHTML=`<div class="rc${anim?' reveal':''}">
     ${t&&t.poster?`<img class="rposter" src="${IMG}w154${t.poster}" alt="Pôster de ${esc(m.title)}">`:''}
     <div class="rbody">
-      <small class="kick">Hoje a sessão é…</small>
+      <small class="kick">${frBlock?'Franquia '+esc(t.col.name)+' sorteada. Comece por…':'Hoje a sessão é…'}</small>
       <h2>${esc(m.title)}</h2>
-      ${t?`<div class="info">${esc(infoLine(t))}</div>`:''}
+      ${t?`<div class="info">${esc(infoLine(t))}</div>`:''}${frBlock}
     </div>
     <div class="racts">
       <button class="btn${m.watched?'':' pri'}" data-act="watch" data-id="${m.id}">${m.watched?'Desmarcar como assistido':'Marcar como assistido'}</button>
@@ -293,7 +342,18 @@ function renderProfile(){
   $('#pfSync').textContent=user?'Conectado como '+user.email:'Sem conta conectada.';
 }
 function renderIdleHint(){if(lastId||spinning)return;$('#res').innerHTML=state.movies.length?idle('Seu filme será…','?'):idle('Sua lista está vazia','Adicione seu primeiro filme');}
-function refreshUI(){renderIdleHint();renderFbar();lock(spinning);draw();renderIdleReel();renderPoolInfo();renderList();renderResult();renderModal();renderProfile();}
+function renderFrOffer(){
+  const box=$('#frOffer');if(!box)return;
+  const seen=new Set();let hit=null;
+  for(const m of state.movies){const c=m.tmdb&&m.tmdb.col;if(!c||!c.total||c.total<2||seen.has(c.id))continue;seen.add(c.id);
+    const have=state.movies.filter(x=>x.tmdb&&x.tmdb.col&&x.tmdb.col.id===c.id).length;
+    if(have<c.total&&!ui.skipCols.includes(c.id)){hit={c,m,miss:c.total-have};break;}}
+  box.hidden=!hit;if(!hit){box.dataset.id='';return;}
+  box.dataset.id=hit.c.id;
+  $('#frOfferTxt').innerHTML=`<b>${esc(hit.m.title)}</b> faz parte da franquia <b>${esc(hit.c.name)}</b>, com ${hit.c.total} filmes. Adicionar ${hit.miss===1?'o outro filme':'os outros '+hit.miss} à lista?`;
+  $('#frAddBtn').textContent=hit.miss===1?'Adicionar o filme':'Adicionar os '+hit.miss;
+}
+function refreshUI(){renderIdleHint();renderFrOffer();renderFbar();lock(spinning);draw();renderIdleReel();renderPoolInfo();renderList();renderResult();renderModal();renderProfile();}
 function refresh(){save();refreshUI();}
 
 /* ---------- Adicionar / buscar ---------- */
@@ -321,6 +381,7 @@ function setTab(t){if(t==='amigos')loadFriends();panelTab=t;$('#ptitle').textCon
 
 /* ---------- Eventos ---------- */
 btn.addEventListener('click',go);$('#spin2').addEventListener('click',go);
+$('#frOn').addEventListener('change',e=>{ui.fr=e.target.checked;try{localStorage.setItem(UIKEY,JSON.stringify(ui));}catch(err){}refreshUI();});
 $('#fg').addEventListener('change',e=>{rg=e.target.value;refreshUI();});
 $('#fclr').addEventListener('click',()=>{rg='';state.incWatched=false;$('#inc').checked=false;refresh();});
 document.addEventListener('click',async e=>{
@@ -331,6 +392,15 @@ document.addEventListener('click',async e=>{
   if(fb){flt=fb.dataset.f;document.querySelectorAll('#filters .btn').forEach(b=>b.classList.toggle('on',b===fb));renderList();return;}
   const el=e.target.closest('[data-act]');if(!el)return;const act=el.dataset.act;
   if(act==='close'){closeModal();return;}
+  if(act==='fr-skip'){const id=+$('#frOffer').dataset.id;if(id&&!ui.skipCols.includes(id)){ui.skipCols.push(id);try{localStorage.setItem(UIKEY,JSON.stringify(ui));}catch(e){}}renderFrOffer();return;}
+  if(act==='fr-add'){
+    const id=+$('#frOffer').dataset.id;if(!id)return;const b=$('#frAddBtn');b.disabled=true;b.textContent='Adicionando…';
+    try{
+      const c=await collectionInfo(id),have=new Set(state.movies.map(x=>x.tmdb&&x.tmdb.id));
+      for(const p of c.parts){if(have.has(p.id))continue;
+        try{const d=await details(p.id);state.movies.push({id:uid(),title:p.title,color:randColor(),watched:false,rating:0,note:'',tmdb:d});}catch(e){}}
+    }catch(e){}
+    b.disabled=false;refresh();return;}
   if(act==='closepanel'){openPanel(false);return;}
   if(act==='togglepanel'){openPanel(!app.classList.contains('open'));return;}
   if(act==='gocfg'){setTab('conta');return;}
@@ -402,7 +472,7 @@ $('#saveKey').addEventListener('click',async()=>{
 });
 $('#enrich').addEventListener('click',async()=>{
   if(!tkey()){msg('Cole e salve sua chave primeiro.');return;}
-  const todo=state.movies.filter(m=>(!m.tmdb&&!m.miss)||(m.tmdb&&m.tmdb.backdrop===undefined));if(!todo.length){msg('Todos os filmes já têm dados.');return;}
+  const todo=state.movies.filter(m=>(!m.tmdb&&!m.miss)||(m.tmdb&&(m.tmdb.backdrop===undefined||m.tmdb.col===undefined)));if(!todo.length){msg('Todos os filmes já têm dados.');return;}
   let n=0;$('#enrich').disabled=true;
   for(const m of todo){
     msg(`Buscando ${++n}/${todo.length}: ${m.title}`);
@@ -677,6 +747,6 @@ if(window.supabase&&/^https:\/\//.test(window.SUPABASE_URL||'')&&window.SUPABASE
 $('#loginChip').addEventListener('click',()=>setTab(user?'perfil':'conta'));
 
 /* ---------- Início ---------- */
-if(window.TMDB_DEFAULT_KEY)$('#keyDef').textContent='Já existe uma chave padrão do site; só preencha se quiser usar a sua.';$('#inc').checked=state.incWatched;$('#key').value=state.key||'';
+if(window.TMDB_DEFAULT_KEY)$('#keyDef').textContent='Já existe uma chave padrão do site; só preencha se quiser usar a sua.';$('#inc').checked=state.incWatched;$('#frOn').checked=ui.fr!==false;$('#key').value=state.key||'';
 renderCgrid();applyUI();setMode(ui.mode);renderFbar();lock(false);renderPoolInfo();renderList();renderAuth();renderProfile();renderFriends();renderIdleHint();
 if(!state.movies.length){setTab('filmes');$('#addbox').open=true;}
