@@ -17,7 +17,8 @@ function load(){
 function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
 function save(){saveLocal();schedulePush();}
 state=load();
-const pool=()=>state.movies.filter(m=>state.incWatched||!m.watched);
+let rg='';
+const pool=()=>state.movies.filter(m=>(state.incWatched||!m.watched)&&(!rg||(m.tmdb&&(m.tmdb.genres||[]).includes(rg))));
 const byId=id=>state.movies.find(m=>m.id===id);
 
 /* ---------- Aparência (temas) ---------- */
@@ -30,8 +31,8 @@ const THEMES=[
 const CKEYS=[['bg','Fundo do site'],['surface','Painéis e cards'],['fg','Texto'],['accent','Botões e seta'],['gold','Aro e detalhes'],['w1','Roleta, fatia A'],['w2','Roleta, fatia B']];
 const darken=(h,f)=>{const n=parseInt(h.slice(1),16),c=v=>Math.round(v*(1-f)).toString(16).padStart(2,'0');return '#'+c(n>>16)+c((n>>8)&255)+c(n&255);};
 const seed=t=>({bg:t.bg,surface:t.surface,fg:t.fg,accent:t.accent,gold:t.gold,w1:t.accent,w2:darken(t.accent,.24)});
-let ui={theme:'cinema',custom:seed(THEMES[0])};
-try{const u=JSON.parse(localStorage.getItem(UIKEY)||'{}');if(u.theme)ui.theme=u.theme;if(u.custom&&u.custom.bg)ui.custom=Object.assign(ui.custom,u.custom);}catch(e){}
+let ui={theme:'cinema',mode:'wheel',custom:seed(THEMES[0])};
+try{const u=JSON.parse(localStorage.getItem(UIKEY)||'{}');if(u.theme)ui.theme=u.theme;if(u.mode==='list')ui.mode='list';if(u.custom&&u.custom.bg)ui.custom=Object.assign(ui.custom,u.custom);}catch(e){}
 if(ui.theme!=='custom'&&!THEMES.some(t=>t.id===ui.theme))ui.theme='cinema';
 function renderThemes(){
   $('#themes').innerHTML=THEMES.map(t=>`<button class="theme${t.id===ui.theme?' sel':''}" data-act="theme" data-t="${t.id}"><span class="sw3">${[t.bg,t.accent,t.gold].map(c=>`<i style="background:${c}"></i>`).join('')}</span>${t.name}</button>`).join('')
@@ -79,7 +80,7 @@ const idle=(a,b)=>`<div class="rc idle"><div class="rbody"><small class="kick">$
 /* ---------- Roleta ---------- */
 const cv=$('#c'),ctx=cv.getContext('2d'),btn=$('#spin');
 let rot=0,spinning=false,lastId=null,tick=0;
-function fit(){const w=$('#stagewrap'),cs=getComputedStyle(w),pw=w.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),ph=w.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom),d=Math.max(160,Math.floor(Math.min(pw,ph,720)));const st=$('#stage');st.style.width=st.style.height=d+'px';size();}
+function fit(){if(ui.mode==='list'){fitReel();return;}const w=$('#stagewrap'),cs=getComputedStyle(w),pw=w.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),ph=w.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom),d=Math.max(160,Math.floor(Math.min(pw,ph,720)));const st=$('#stage');st.style.width=st.style.height=d+'px';size();}
 function size(){const r=cv.getBoundingClientRect();if(r.width<10)return;const d=Math.min(window.devicePixelRatio||1,2.5);cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);draw();}
 function draw(){
   const W=cv.width;if(W<20)return;
@@ -131,7 +132,7 @@ function confetti(){
 }
 function spin(){
   const P=pool(),n=P.length;if(spinning||!n)return;
-  spinning=true;btn.disabled=true;
+  lock(true);
   const a=TAU/n,idx=Math.floor(Math.random()*n),off=(Math.random()-.5)*a*.7;
   const final=-(idx+.5)*a+off;
   const delta=((final-rot)%TAU+TAU)%TAU+TAU*(5+Math.floor(Math.random()*3));
@@ -140,9 +141,59 @@ function spin(){
   (function f(now){
     const p=Math.min((now-t0)/dur,1);rot=start+delta*(1-Math.pow(1-p,4));tick=Math.floor((now-t0)/110);draw();
     if(p<1)requestAnimationFrame(f);
-    else{rot=((rot%TAU)+TAU)%TAU;spinning=false;btn.disabled=false;lastId=P[idx].id;renderResult(true);confetti();if(navigator.vibrate)try{navigator.vibrate(200)}catch(e){}}
+    else{rot=((rot%TAU)+TAU)%TAU;lock(false);finish(P[idx]);}
   })(t0);
 }
+const lock=v=>{spinning=v;const off=v||!pool().length;btn.disabled=off;$('#spin2').disabled=off;};
+function finish(m){lastId=m.id;renderResult(true);confetti();if(navigator.vibrate)try{navigator.vibrate(200)}catch(e){}}
+function go(){if(spinning)return;ui.mode==='list'?spinList():spin();}
+
+/* ---------- Modelo "Lista": a faixa desce e para no filme sorteado ---------- */
+const RH=68;
+const rowHTML=m=>{const t=m.tmdb,sub=[t&&t.year,t&&(t.genres||[]).slice(0,2).join(', ')].filter(Boolean).join(' · ');
+  return `<div class="ri"><div class="rcv">${t&&t.poster?`<img src="${IMG}w154${t.poster}" alt="">`:`<div class="ph" style="--c:${esc(m.color)}"></div>`}</div><div class="rtx"><b>${esc(m.title)}</b>${sub?`<span>${esc(sub)}</span>`:''}</div></div>`;};
+const tyFor=i=>$('#reel').clientHeight/2-(i+.5)*RH;
+function fitReel(){
+  if(ui.mode!=='list')return;
+  let n=Math.floor(($('#stagewrap').clientHeight-84)/RH);if(n%2===0)n--;n=Math.max(3,Math.min(9,n));
+  $('#reel').style.height=n*RH+'px';renderIdleReel();
+}
+let reelSig='',reelIdx=4;
+const poolSig=()=>pool().map(m=>m.id).join(',');
+function renderIdleReel(){
+  if(spinning||ui.mode!=='list')return;
+  const P=pool(),st=$('#strip'),sig=poolSig();
+  if(!P.length){st.innerHTML=`<div class="ri none"><b>${state.movies.length?'Nenhum filme com esses filtros':'Sua lista está vazia'}</b></div>`;st.style.transform=`translateY(${$('#reel').clientHeight/2-RH/2}px)`;reelSig='';return;}
+  if(sig!==reelSig||!st.children.length){
+    let arr=P.slice();while(arr.length<12)arr=arr.concat(P);
+    st.innerHTML=arr.map(rowHTML).join('');reelSig=sig;reelIdx=4;
+  }
+  st.style.transform=`translateY(${tyFor(reelIdx)}px)`;
+}
+function spinList(){
+  const P=pool();if(spinning||!P.length)return;
+  lock(true);setBackdrop(null);$('#res').innerHTML=idle('Girando…','🎞️');
+  const win=P[Math.floor(Math.random()*P.length)],L=Math.max(45,P.length*2),W=4,arr=[];let prev=null;
+  for(let i=0;i<L;i++){let m;do{m=P[Math.floor(Math.random()*P.length)];}while(P.length>1&&m===prev);arr.push(m);prev=m;}
+  arr[W]=win;
+  if(P.length>1)[W-1,W+1].forEach(j=>{while(arr[j]===win)arr[j]=P[Math.floor(Math.random()*P.length)];});
+  const st=$('#strip');st.innerHTML=arr.map(rowHTML).join('');
+  const from=tyFor(L-4),to=tyFor(W),t0=performance.now(),dur=(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)?300:5200;
+  st.style.transform=`translateY(${from}px)`;
+  (function f(now){
+    const p=Math.min(1,(now-t0)/dur),e=1-Math.pow(1-p,4);st.style.transform=`translateY(${from+(to-from)*e}px)`;
+    if(p<1)requestAnimationFrame(f);else{reelIdx=W;reelSig=poolSig();lock(false);finish(win);}
+  })(t0);
+}
+function setMode(m){
+  ui.mode=m==='list'?'list':'wheel';
+  try{localStorage.setItem(UIKEY,JSON.stringify(ui));}catch(e){}
+  document.querySelectorAll('#mode button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===ui.mode));
+  $('#stage').hidden=ui.mode!=='wheel';$('#reelwrap').hidden=ui.mode!=='list';
+  fit();draw();renderIdleReel();
+}
+document.querySelectorAll('#mode button').forEach(b=>b.addEventListener('click',()=>{if(!spinning)setMode(b.dataset.m);}));
+
 function setBackdrop(m){
   const bd=$('#bd'),t=m&&m.tmdb,path=t&&(t.backdrop||t.poster);
   if(path){bd.style.backgroundImage=`url("${IMG}${t.backdrop?'w1280':'w780'}${path}")`;bd.classList.add('on');}
@@ -169,6 +220,12 @@ function renderResult(anim){
     </div></div>`;
 }
 const renderPoolInfo=()=>{const n=pool().length;$('#poolInfo').textContent=`${n} filme${n===1?'':'s'} na roleta`;};
+function renderFbar(){
+  const set=new Set();state.movies.forEach(m=>m.tmdb&&(m.tmdb.genres||[]).forEach(g=>set.add(g)));
+  const gs=[...set].sort((x,y)=>x.localeCompare(y,'pt'));if(rg&&!set.has(rg))rg='';
+  $('#fg').innerHTML='<option value="">Todos os gêneros</option>'+gs.map(g=>`<option value="${esc(g)}"${g===rg?' selected':''}>${esc(g)}</option>`).join('');
+  $('#fg').hidden=!gs.length;$('#fclr').hidden=!(rg||state.incWatched);
+}
 
 /* ---------- Biblioteca ---------- */
 let flt='all',query='',sortBy='recent',genre='';
@@ -227,14 +284,14 @@ function renderProfile(){
   const d=state.movies.filter(m=>m.watched),rs=state.movies.filter(m=>m.rating>0);
   $('#k1').textContent=d.length;$('#k2').textContent=state.movies.length-d.length;
   $('#k3').textContent=rs.length?(rs.reduce((s,m)=>s+m.rating,0)/rs.length).toFixed(1):'–';
-  const nm=user?user.email.split('@')[0]:'Visitante';
-  $('#pfName').textContent=nm;$('#pfAv').textContent=nm.charAt(0).toUpperCase();
-  $('#pfUser').textContent=user?'@'+nm.toLowerCase().replace(/[^a-z0-9._]/g,''):'Entre na conta para sincronizar';
+  const nm=pName(),un=pUser();
+  $('#pfName').textContent=nm;$('#pfAv').textContent=(nm.trim().charAt(0)||'?').toUpperCase();
+  $('#pfUser').textContent=un?'@'+un:(user?'Defina seu usuário':'Entre na conta para sincronizar');
   $('#mycode').textContent=friendCode();
   $('#pfSync').textContent=user?'Conectado como '+user.email:'Sem conta conectada.';
 }
 function renderIdleHint(){if(lastId||spinning)return;$('#res').innerHTML=state.movies.length?idle('Seu filme será…','?'):idle('Sua lista está vazia','Adicione seu primeiro filme');}
-function refreshUI(){renderIdleHint();draw();renderPoolInfo();renderList();renderResult();renderModal();renderProfile();}
+function refreshUI(){renderIdleHint();renderFbar();lock(spinning);draw();renderIdleReel();renderPoolInfo();renderList();renderResult();renderModal();renderProfile();}
 function refresh(){save();refreshUI();}
 
 /* ---------- Adicionar / buscar ---------- */
@@ -261,7 +318,9 @@ function openPanel(v){app.classList.toggle('open',v);document.querySelectorAll('
 function setTab(t){panelTab=t;$('#ptitle').textContent=PT[t];document.querySelectorAll('.pb').forEach(p=>p.classList.toggle('on',p.id==='t-'+t));openPanel(true);}
 
 /* ---------- Eventos ---------- */
-btn.addEventListener('click',spin);
+btn.addEventListener('click',go);$('#spin2').addEventListener('click',go);
+$('#fg').addEventListener('change',e=>{rg=e.target.value;refreshUI();});
+$('#fclr').addEventListener('click',()=>{rg='';state.incWatched=false;$('#inc').checked=false;refresh();});
 document.addEventListener('click',async e=>{
   if(e.target.id==='modal'){closeModal();return;}
   const rt=e.target.closest('.rt');
@@ -370,6 +429,66 @@ $('#file').addEventListener('change',async e=>{
   e.target.value='';
 });
 
+/* ---------- Perfil (nome e usuário; a foto é a inicial do nome) ---------- */
+const PROFKEY='roleta-profile-v1';
+let prof={name:'',user:''};
+try{const s=JSON.parse(localStorage.getItem(PROFKEY)||'null');if(s)prof={name:String(s.name||''),user:String(s.user||'')};}catch(e){}
+const saveProf=()=>{try{localStorage.setItem(PROFKEY,JSON.stringify(prof));}catch(e){}};
+const cleanUser=s=>String(s||'').toLowerCase().replace(/[^a-z0-9._]/g,'').replace(/^\.+|\.+$/g,'').slice(0,20);
+const emailBase=()=>user?user.email.split('@')[0]:'';
+const pName=()=>prof.name||emailBase()||'Visitante';
+const pUser=()=>prof.user||cleanUser(emailBase());
+let chkTok=0,userOk=false,pfBusy=false;
+const pfUval=()=>$('#pfu').value.trim().toLowerCase();
+function setHint(t,c){const h=$('#pfuh');h.textContent=t;h.className='hint'+(c?' '+c:'');}
+function updSave(){
+  const n=$('#pfn').value.trim(),v=pfUval();
+  $('#pfnh').textContent=n?'':'Digite um nome.';
+  $('#psave').disabled=pfBusy||!n||!v||!(v===pUser()||userOk)||(n===pName()&&v===pUser());
+  $('#pav2').textContent=(n.charAt(0)||'?').toUpperCase();
+}
+async function userTaken(v){
+  try{const {data,error}=await sb.from('profiles').select('user_id').eq('username',v).maybeSingle();
+    if(error)return false;return !!data&&data.user_id!==user.id;}catch(e){return false;}
+}
+function checkUser(){
+  const v=pfUval(),tok=++chkTok;userOk=false;
+  if(v&&v===pUser()){setHint('Este é o seu usuário atual.');}
+  else if(v.length<3)setHint('Use de 3 a 20 caracteres.','bad');
+  else if(!/^[a-z0-9._]+$/.test(v))setHint('Use só letras sem acento, números, ponto e _.','bad');
+  else if(/^\.|\.$/.test(v))setHint('Não pode começar nem terminar com ponto.','bad');
+  else if(!(sb&&user)){userOk=true;setHint('Sem conta conectada, o usuário fica só neste aparelho.');}
+  else{setHint('Verificando…');userTaken(v).then(t=>{if(tok!==chkTok)return;userOk=!t;setHint(t?'@'+v+' já está em uso.':'@'+v+' está disponível.',t?'bad':'ok');updSave();});}
+  updSave();
+}
+function openEdit(v){
+  $('#pview').hidden=v;$('#pform').hidden=!v;
+  if(v){$('#pfn').value=pName()==='Visitante'?'':pName();$('#pfu').value=pUser();$('#pfuh').textContent='';$('#pfMsg').textContent='';userOk=false;updSave();$('#pfn').focus();}
+}
+$('#pedit').addEventListener('click',()=>openEdit(true));
+$('#pcancel').addEventListener('click',()=>openEdit(false));
+$('#pfn').addEventListener('input',updSave);
+$('#pfu').addEventListener('input',checkUser);
+$('#pform').addEventListener('submit',async e=>{
+  e.preventDefault();if($('#psave').disabled)return;
+  const name=$('#pfn').value.trim(),uname=pfUval();let note='';pfBusy=true;updSave();
+  if(sb&&user){
+    const {error}=await sb.from('profiles').upsert({user_id:user.id,username:uname,name});
+    if(error){
+      pfBusy=false;
+      if(error.code==='23505'){userOk=false;setHint('@'+uname+' já está em uso.','bad');updSave();return;}
+      if(/PGRST205|42P01|schema cache|does not exist/i.test((error.code||'')+' '+(error.message||'')))note=' (salvo só neste aparelho: falta criar a tabela de perfis no Supabase)';
+      else{setHint('Erro ao salvar: '+error.message,'bad');updSave();return;}
+    }
+  }
+  prof={name,user:uname};saveProf();pfBusy=false;renderProfile();openEdit(false);
+  $('#pfMsg').textContent='Perfil atualizado'+note+'.';
+});
+async function pullProfile(){
+  try{const {data,error}=await sb.from('profiles').select('username,name').eq('user_id',user.id).maybeSingle();
+    if(error||!data)return;prof={name:data.name||'',user:data.username||''};saveProf();renderProfile();}catch(e){}
+}
+
 /* ---------- Nuvem (Supabase) ---------- */
 let sb=null,user=null,pushTimer=null,cloudIds=new Set(),pulledFor=null;
 const setSync=t=>{const el=$('#syncMsg');if(el)el.textContent=t;};
@@ -386,7 +505,7 @@ async function pushAll(){
   }catch(e){setSync('⚠️ Erro ao salvar: '+(e.message||e));}
 }
 async function pullCloud(){
-  setSync('⏳ Carregando sua lista…');
+  setSync('⏳ Carregando sua lista…');pullProfile();
   const {data,error}=await sb.from('movies').select('*').order('pos');
   if(error){setSync('⚠️ '+error.message);return;}
   if(data.length){
@@ -418,7 +537,7 @@ if(window.supabase&&/^https:\/\//.test(window.SUPABASE_URL||'')&&window.SUPABASE
   sb.auth.onAuthStateChange((ev,session)=>{
     user=session?session.user:null;renderAuth();
     if(user&&(ev==='INITIAL_SESSION'||ev==='SIGNED_IN')&&pulledFor!==user.id){pulledFor=user.id;setTimeout(pullCloud,0);}
-    if(!user){pulledFor=null;cloudIds=new Set();if(ev==='SIGNED_OUT')setSync('Você saiu da conta.');}
+    if(!user){pulledFor=null;cloudIds=new Set();if(ev==='SIGNED_OUT'){setSync('Você saiu da conta.');prof={name:'',user:''};saveProf();renderProfile();}}
   });
   $('#inBtn').addEventListener('click',()=>authDo('in'));
   $('#upBtn').addEventListener('click',()=>authDo('up'));
@@ -428,5 +547,5 @@ $('#loginChip').addEventListener('click',()=>setTab(user?'perfil':'ajustes'));
 
 /* ---------- Início ---------- */
 $('#inc').checked=state.incWatched;$('#key').value=state.key||'';
-renderCgrid();applyUI();fit();renderPoolInfo();renderList();renderAuth();renderProfile();renderIdleHint();
+renderCgrid();applyUI();setMode(ui.mode);renderFbar();lock(false);renderPoolInfo();renderList();renderAuth();renderProfile();renderIdleHint();
 if(!state.movies.length){setTab('filmes');$('#addbox').open=true;}

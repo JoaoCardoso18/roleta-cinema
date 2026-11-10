@@ -31,3 +31,26 @@ create policy "Editar apenas os próprios filmes" on public.movies
 
 create policy "Apagar apenas os próprios filmes" on public.movies
   for delete to authenticated using ((select auth.uid()) = user_id);
+
+-- ---------------------------------------------------------------
+-- Perfis (nome e nome de usuário). Rode este bloco se você já tinha
+-- criado a tabela de filmes antes.
+-- ---------------------------------------------------------------
+create table if not exists public.profiles (
+  user_id uuid primary key default auth.uid() references auth.users(id) on delete cascade,
+  username text not null unique check (username ~ '^[a-z0-9._]{3,20}$' and username !~ '^\.|\.$'),
+  name text not null default '' check (char_length(name) <= 30),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+
+create policy "Ver perfis" on public.profiles
+  for select to authenticated using (true);
+
+create policy "Criar o próprio perfil" on public.profiles
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+
+create policy "Editar o próprio perfil" on public.profiles
+  for update to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);

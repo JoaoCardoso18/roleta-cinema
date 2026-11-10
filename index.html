@@ -17,8 +17,17 @@
     <div class="bd" id="bd"></div>
     <header class="top">
       <div class="brand">Roleta Cinema</div>
-      <button class="chip" id="loginChip" hidden></button>
+      <div class="topr">
+        <div class="seg" id="mode" role="group" aria-label="Modelo da roleta"><button data-m="wheel" aria-pressed="true">Roda</button><button data-m="list" aria-pressed="false">Lista</button></div>
+        <button class="chip" id="loginChip" hidden></button>
+      </div>
     </header>
+    <div class="fbar" id="fbar">
+      <select id="fg" aria-label="Filtrar a roleta por gênero" hidden></select>
+      <label class="check"><input type="checkbox" id="inc"> Incluir já assistidos</label>
+      <button class="btn" id="fclr" hidden>Limpar filtros</button>
+      <span class="stats" id="poolInfo"></span>
+    </div>
 
     <div class="stagewrap" id="stagewrap">
       <div class="stage" id="stage">
@@ -26,13 +35,13 @@
         <canvas id="c" aria-label="Roleta de filmes"></canvas>
         <button class="hub" id="spin">GIRAR</button>
       </div>
+      <div class="reelwrap" id="reelwrap" hidden>
+        <div class="reel" id="reel" aria-label="Lista de filmes sorteando"><div class="strip" id="strip"></div><div class="hl"></div><div class="rptr"></div></div>
+        <button class="btn pri big" id="spin2">GIRAR</button>
+      </div>
     </div>
 
     <div id="res" aria-live="polite"><div class="rc idle"><div class="rbody"><small class="kick">Seu filme será…</small><h2>?</h2></div></div></div>
-    <div class="row center opts">
-      <label class="check"><input type="checkbox" id="inc"> Incluir já assistidos</label>
-      <span class="stats" id="poolInfo"></span>
-    </div>
     <footer class="foot">Este produto usa a API do TMDB, mas não é endossado nem certificado pelo TMDB.</footer>
   </main>
 
@@ -69,7 +78,16 @@
       </section>
 
       <section class="pb" id="t-perfil">
-        <div class="profile"><div class="av" id="pfAv">?</div><div><h3 id="pfName">Visitante</h3><p id="pfUser">Entre na conta para sincronizar</p></div></div>
+        <div id="pview">
+          <div class="profile"><div class="av" id="pfAv">?</div><div class="who"><h3 id="pfName">Visitante</h3><p id="pfUser">Entre na conta para sincronizar</p></div><button class="ib" id="pedit" aria-label="Editar perfil"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"/></svg></button></div>
+          <div class="stats" id="pfMsg"></div>
+        </div>
+        <form class="box edform" id="pform" hidden>
+          <div class="profile"><div class="av" id="pav2">?</div><div class="who stats">A foto do perfil é a inicial do seu nome.</div></div>
+          <div class="fld"><label class="lab" for="pfn">Nome</label><input type="text" id="pfn" maxlength="30" autocomplete="off"><div class="hint" id="pfnh"></div></div>
+          <div class="fld"><label class="lab" for="pfu">Nome de usuário</label><div class="pre"><span>@</span><input type="text" id="pfu" maxlength="20" autocomplete="off" autocapitalize="none" spellcheck="false"></div><div class="hint" id="pfuh"></div></div>
+          <div class="acts"><button type="button" class="btn" id="pcancel">Cancelar</button><button type="submit" class="btn pri" id="psave" disabled>Salvar</button></div>
+        </form>
         <div class="grid3">
           <div class="kpi"><b id="k1">0</b><span>assistidos</span></div>
           <div class="kpi"><b id="k2">0</b><span>na fila</span></div>
