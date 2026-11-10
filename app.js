@@ -690,15 +690,17 @@ async function pullCloud(){
 function renderAuth(){
   $('#cloudOff').hidden=!!sb;
   $('#authIn').hidden=!sb||!!user;
-  $('#authOut').hidden=!sb||!user;
+  $('#authOut').hidden=!sb||!user||recovery;
+  $('#recForm').hidden=!sb||!user||!recovery;
   $('#who').textContent=user?user.email:'';
   const chip=$('#loginChip');chip.hidden=!sb;chip.innerHTML=IC.cloud+esc(user?user.email.split('@')[0]:'Entrar para sincronizar');renderProfile();
 }
-let authMode='in',authBusy=false;
+let authMode='in',authBusy=false,recovery=false;
 function setAuthMode(m){
   authMode=m;
   document.querySelectorAll('#authSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===m));
   $('#authGo').textContent=m==='up'?'Criar conta':'Entrar';
+  $('#forgot').hidden=m==='up';
   $('#pass').autocomplete=m==='up'?'new-password':'current-password';
   $('#authLead').textContent=m==='up'?'Crie sua conta para guardar a lista na nuvem e adicionar amigos. Não precisa confirmar o e-mail.':'Entre para guardar sua lista na nuvem, acessá-la em qualquer aparelho e adicionar amigos.';
   setSync('');
@@ -735,11 +737,34 @@ async function authDo(){
 if(window.supabase&&/^https:\/\//.test(window.SUPABASE_URL||'')&&window.SUPABASE_KEY&&!/COLE/.test(window.SUPABASE_KEY)){
   sb=window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_KEY);
   sb.auth.onAuthStateChange((ev,session)=>{
+    if(ev==='PASSWORD_RECOVERY'){recovery=true;setTab('conta');setSync('Defina sua nova senha abaixo.');}
     user=session?session.user:null;renderAuth();
     if(user&&(ev==='INITIAL_SESSION'||ev==='SIGNED_IN')&&pulledFor!==user.id){pulledFor=user.id;setTimeout(pullCloud,0);}
     if(!user){pulledFor=null;cloudIds=new Set();if(ev==='SIGNED_OUT'){setSync('Você saiu da conta.');prof={name:'',user:''};saveProf();renderProfile();fr={rows:[],prof:{},view:null,movies:null,missing:false,err:'',loaded:false};renderFriends();}}
   });
   $('#authIn').addEventListener('submit',e=>{e.preventDefault();authDo();});
+  $('#forgot').addEventListener('click',async()=>{
+    const email=$('#email').value.trim();
+    if(!/^\S+@\S+\.\S+$/.test(email)){setSync('Digite seu e-mail acima para receber o link.','bad');$('#email').focus();return;}
+    $('#forgot').disabled=true;setSync('Enviando…');
+    try{
+      const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+      if(error)setSync(authErr(error),'bad');
+      else setSync('Se existir uma conta com esse e-mail, enviamos um link para redefinir a senha. Confira também o spam.','ok');
+    }catch(e){setSync(authErr(e),'bad');}
+    finally{$('#forgot').disabled=false;}
+  });
+  $('#recForm').addEventListener('submit',async e=>{
+    e.preventDefault();const p=$('#newpass').value;
+    if(p.length<6){setSync('A senha precisa ter pelo menos 6 caracteres.','bad');return;}
+    $('#recGo').disabled=true;setSync('Salvando…');
+    try{
+      const {error}=await sb.auth.updateUser({password:p});
+      if(error){setSync(authErr(error),'bad');return;}
+      recovery=false;$('#newpass').value='';renderAuth();setSync('Senha alterada com sucesso.','ok');
+    }catch(err){setSync(authErr(err),'bad');}
+    finally{$('#recGo').disabled=false;}
+  });
   document.querySelectorAll('#authSeg button').forEach(b=>b.addEventListener('click',()=>setAuthMode(b.dataset.m)));
   $('#pwShow').addEventListener('click',()=>{const p=$('#pass'),s=p.type==='password';p.type=s?'text':'password';$('#pwShow').textContent=s?'Ocultar':'Mostrar';$('#pwShow').setAttribute('aria-pressed',s);});
   $('#outBtn').addEventListener('click',()=>sb.auth.signOut());

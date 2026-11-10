@@ -135,7 +135,14 @@
           <input type="email" id="email" placeholder="voce@email.com" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false">
           <label class="lab" for="pass">Senha</label>
           <div class="pw"><input type="password" id="pass" placeholder="Mínimo de 6 caracteres" autocomplete="current-password"><button type="button" class="btn" id="pwShow" aria-pressed="false">Mostrar</button></div>
-          <div class="row"><button type="submit" class="btn pri" id="authGo">Entrar</button></div>
+          <div class="row"><button type="submit" class="btn pri" id="authGo">Entrar</button><button type="button" class="linkbtn" id="forgot">Esqueci minha senha</button></div>
+        </form>
+        <form class="box" id="recForm" hidden novalidate>
+          <h2>Definir nova senha</h2>
+          <p>Escolha a nova senha da sua conta.</p>
+          <label class="lab" for="newpass">Nova senha</label>
+          <input type="password" id="newpass" placeholder="Mínimo de 6 caracteres" autocomplete="new-password">
+          <div class="row"><button type="submit" class="btn pri" id="recGo">Salvar nova senha</button></div>
         </form>
         <div class="box" id="authOut" hidden>
           <h2><svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 010-8 5.5 5.5 0 0110.6 1.4A3.3 3.3 0 0117 18z"/></svg>Conta conectada</h2>
