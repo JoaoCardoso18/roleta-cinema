@@ -65,7 +65,7 @@ async function tm(path,params={}){
   const opt={};if(k.length>40)opt.headers={Authorization:'Bearer '+k};else u.searchParams.set('api_key',k);
   const r=await fetch(u,opt);if(!r.ok)throw new Error(String(r.status));return r.json();
 }
-const cleanCol=n=>String(n||'').replace(/\s*[-–]\s*(Cole[cç][aã]o|Collection|Saga)\s*$/i,'').replace(/^(Cole[cç][aã]o|Saga)\s+/i,'').trim();
+const cleanCol=n=>String(n||'').replace(/(?:\s*(?:[-–:]|\()\s*|\s+)(?:Cole[cç][aã]o|Collection|Saga|Trilogia)\)?\s*$/i,'').replace(/^(?:Cole[cç][aã]o|Saga)\s+(?:d[oae]s?\s+)?/i,'').trim();
 const colCache={};
 async function collectionInfo(id){
   if(colCache[id])return colCache[id];
@@ -100,7 +100,7 @@ const frColor=(f,def)=>FRC[Math.abs(+f.id||0)%FRC.length]||def;
 let slotMemo={sig:'',list:[]};
 function slots(){
   const P=pool(),g={};
-  P.forEach(m=>{const c=colOf(m);if(c)(g[c.id]=g[c.id]||{id:c.id,name:c.name,mem:[]}).mem.push(m);});
+  P.forEach(m=>{const c=colOf(m);if(c)(g[c.id]=g[c.id]||{id:c.id,name:cleanCol(c.name),mem:[]}).mem.push(m);});
   const groups=Object.values(g).filter(x=>x.mem.length>1),gid=new Set(groups.map(x=>String(x.id)));
   groups.forEach(x=>x.mem.sort((p,q)=>ordOf(p)-ordOf(q)));
   const inG=m=>{const c=colOf(m);return !!c&&gid.has(String(c.id));};
@@ -248,7 +248,7 @@ async function ensureBackdrop(m){
 function frNote(c){
   const mem=state.movies.filter(x=>x.tmdb&&x.tmdb.col&&String(x.tmdb.col.id)===String(c.id)).sort((p,q)=>ordOf(p)-ordOf(q));
   const done=mem.filter(x=>x.watched).length,total=Math.max(c.total||0,mem.length),nx=mem.find(x=>!x.watched),miss=total-mem.length;
-  return `<div class="frnote"><div class="frh"><b>Franquia ${esc(c.name)}</b><span>${done} de ${total} assistidos</span></div>
+  return `<div class="frnote"><div class="frh"><b>Franquia ${esc(cleanCol(c.name))}</b><span>${done} de ${total} assistidos</span></div>
     <div class="bar" aria-hidden="true"><i style="width:${total?done/total*100:0}%"></i></div>
     <ul class="fro">${mem.map(x=>`<li class="${x.watched?'done':x===nx?'next':''}"><span class="n">${x.tmdb.col.n||''}</span><span class="tt">${esc(x.title)}</span><span class="st">${x.watched?'Assistido':x===nx?'Comece por aqui':''}</span></li>`).join('')}</ul>
     ${miss>0?`<div class="stats">${miss} filme${miss>1?'s':''} da franquia ainda fora da sua lista.</div>`:''}</div>`;
@@ -261,7 +261,7 @@ function renderResult(anim){
   $('#res').innerHTML=`<div class="rc${anim?' reveal':''}">
     ${t&&t.poster?`<img class="rposter" src="${IMG}w154${t.poster}" alt="Pôster de ${esc(m.title)}">`:''}
     <div class="rbody">
-      <small class="kick">${frBlock?'Franquia '+esc(t.col.name)+' sorteada. Comece por…':'Hoje a sessão é…'}</small>
+      <small class="kick">${frBlock?'Franquia '+esc(cleanCol(t.col.name))+' sorteada. Comece por…':'Hoje a sessão é…'}</small>
       <h2>${esc(m.title)}</h2>
       ${t?`<div class="info">${esc(infoLine(t))}</div>`:''}${frBlock}
     </div>
@@ -319,7 +319,7 @@ function franchiseTab(m){
   if(cached)cached.parts.forEach((p,i)=>{if(!inList.has(p.id))rows.push({n:i+1,t:p.title,y:(p.release_date||'').slice(0,4),st:'Fora da lista',cls:'out',me:false,tm:p.id});});
   rows.sort((p,q)=>(p.n||99)-(q.n||99));
   const done=mem.filter(x=>x.watched).length,total=Math.max(c.total||0,rows.length);
-  return `<div class="frnote"><div class="frh"><b>Franquia ${esc(c.name)}</b><span>${total} filmes · ${mem.length} na sua lista · ${done} assistidos</span></div>
+  return `<div class="frnote"><div class="frh"><b>Franquia ${esc(cleanCol(c.name))}</b><span>${total} filmes · ${mem.length} na sua lista · ${done} assistidos</span></div>
     <ul class="fro tall">${rows.map(r=>`<li class="${r.cls}${r.me?' me':''}"><span class="n">${r.n||''}</span><span class="tt">${esc(r.t)}${r.y?' <i>('+esc(r.y)+')</i>':''}</span><span class="st">${r.me?'Este filme':r.st}</span></li>`).join('')}</ul>
     ${cached?'':'<div class="stats">Carregando os demais filmes da franquia…</div>'}</div>`;
 }
@@ -368,7 +368,7 @@ function renderFrOffer(){
     if(have<c.total&&!ui.skipCols.includes(c.id)){hit={c,m,miss:c.total-have};break;}}
   box.hidden=!hit;if(!hit){box.dataset.id='';return;}
   box.dataset.id=hit.c.id;
-  $('#frOfferTxt').innerHTML=`<b>${esc(hit.m.title)}</b> faz parte da franquia <b>${esc(hit.c.name)}</b>, com ${hit.c.total} filmes. Adicionar ${hit.miss===1?'o outro filme':'os outros '+hit.miss} à lista?`;
+  $('#frOfferTxt').innerHTML=`<b>${esc(hit.m.title)}</b> faz parte da franquia <b>${esc(cleanCol(hit.c.name))}</b>, com ${hit.c.total} filmes. Adicionar ${hit.miss===1?'o outro filme':'os outros '+hit.miss} à lista?`;
   $('#frAddBtn').textContent=hit.miss===1?'Adicionar o filme':'Adicionar os '+hit.miss;
 }
 function refreshUI(){renderIdleHint();renderFrOffer();renderFbar();lock(spinning);draw();renderIdleReel();renderPoolInfo();renderList();renderResult();renderModal();renderProfile();}
