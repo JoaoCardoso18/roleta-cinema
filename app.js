@@ -338,11 +338,13 @@ $('#enrich').addEventListener('click',async()=>{
   }
   $('#enrich').disabled=false;refresh();if(n===todo.length)msg('Concluído! Confira em Meus filmes.');
 });
-/* Apagar a lista inteira, com duas verificações: confirmar o aviso e digitar APAGAR */
+/* Apagar só os filmes "Quero ver", com duas verificações: confirmar o aviso e digitar APAGAR */
+const queroVer=()=>state.movies.filter(m=>!m.watched);
 function wipeReset(){$('#wipeA').hidden=true;$('#wipeB').hidden=true;$('#wipeTxt').value='';$('#wipe3').disabled=true;$('#wipe1').hidden=false;}
 $('#wipe1').addEventListener('click',()=>{
-  const n=state.movies.length;if(!n){msg('Sua lista já está vazia.');return;}
-  $('#wipeAmsg').textContent=`Isso vai apagar ${n} filme${n===1?'':'s'}, com notas e anotações${user?', inclusive na nuvem':''}. Deseja continuar?`;
+  const n=queroVer().length,keep=state.movies.length-n;
+  if(!n){msg('Você não tem filmes marcados como “Quero ver”.');return;}
+  $('#wipeAmsg').textContent=`Isso vai apagar ${n} filme${n===1?'':'s'} marcado${n===1?'':'s'} como “Quero ver”${user?', inclusive na nuvem':''}. ${keep?(keep===1?'O filme assistido continua na lista.':`Os ${keep} filmes assistidos continuam na lista.`):'Você não tem filmes assistidos.'} Deseja continuar?`;
   $('#wipe1').hidden=true;$('#wipeA').hidden=false;
 });
 $('#wipeCancelA').addEventListener('click',wipeReset);
@@ -351,8 +353,10 @@ $('#wipe2').addEventListener('click',()=>{$('#wipeA').hidden=true;$('#wipeB').hi
 $('#wipeTxt').addEventListener('input',e=>{$('#wipe3').disabled=norm(e.target.value.trim())!=='apagar';});
 $('#wipe3').addEventListener('click',()=>{
   if(norm($('#wipeTxt').value.trim())!=='apagar')return;
-  state.movies=[];lastId=null;closeModal();setBackdrop(null);
-  refresh();wipeReset();msg('Lista apagada.');
+  const n=queroVer().length;
+  state.movies=state.movies.filter(m=>m.watched);
+  if(lastId&&!byId(lastId)){lastId=null;setBackdrop(null);}
+  closeModal();refresh();wipeReset();msg(`${n} filme${n===1?'':'s'} apagado${n===1?'':'s'}.`);
 });
 $('#exp').addEventListener('click',()=>{
   const b=new Blob([JSON.stringify({...state,key:''},null,1)],{type:'application/json'});
