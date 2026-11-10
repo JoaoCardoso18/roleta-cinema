@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0d0b0e">
 <title>Roleta Cinema</title>
 <meta name="description" content="Roleta para sortear o próximo filme, com capas, sinopses e suas notas.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎬%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='29' fill='%23c8102e' stroke='%23e0b84c' stroke-width='5'/%3E%3Cpath d='M32 32L32 5M32 32L58 40M32 32L16 54' stroke='%23e0b84c' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='7' fill='%23e0b84c'/%3E%3C/svg%3E">
 <script>try{var u=JSON.parse(localStorage.getItem('roleta-ui-v1')||'{}');if(u.theme){var r=document.documentElement;r.dataset.theme=u.theme;if(u.theme==='custom'&&u.custom){for(var k in u.custom)r.style.setProperty('--'+k,u.custom[k]);}}}catch(e){}</script>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -134,7 +134,7 @@
           <div class="row"><button type="submit" class="btn pri" id="authGo">Entrar</button></div>
         </form>
         <div class="box" id="authOut" hidden>
-          <h2>☁️ Conta conectada</h2>
+          <h2><svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 010-8 5.5 5.5 0 0110.6 1.4A3.3 3.3 0 0117 18z"/></svg>Conta conectada</h2>
           <p>Conectado como <b id="who"></b></p>
           <p class="stats">Sua lista é sincronizada automaticamente.</p>
           <div class="row"><button class="btn" id="outBtn">Sair da conta</button></div>
@@ -144,7 +144,7 @@
 
       <section class="pb" id="t-ajustes">
         <div class="box">
-          <h2>🎨 Aparência</h2>
+          <h2><svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 100 18c1.4 0 2-1 1.5-2.2-.5-1.2.3-2.3 1.6-2.3H17a4 4 0 004-4c0-5-4-9.5-9-9.5z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>Aparência</h2>
           <p>Escolha um tema pronto ou monte o seu em “Customizado”. Fica salvo neste aparelho.</p>
           <div class="themes" id="themes"></div>
         </div>
@@ -154,23 +154,23 @@
           <button class="btn" data-act="resetui">Voltar às cores do Cinema</button>
         </div>
         <div class="box">
-          <h2>🔑 Conexão com o TMDB</h2>
+          <h2><svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></svg>Conexão com o TMDB</h2>
           <p>Crie uma conta gratuita em <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org/settings/api</a> e cole aqui o <b>Token de Leitura da API</b> (ou a chave da API v3). Ela fica salva só no seu navegador. <span id="keyDef"></span></p>
           <input type="password" id="key" placeholder="Cole sua chave aqui" autocomplete="off">
           <div class="row"><button class="btn pri" id="saveKey">Salvar e testar</button></div>
         </div>
         <div class="box">
-          <h2>✨ Preencher dados dos filmes</h2>
+          <h2><svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>Dados dos filmes</h2>
           <p>Busca capa, imagem de fundo, sinopse, ano, gênero e diretor para os filmes que ainda não têm dados. Confira depois se algum foi associado ao filme errado.</p>
           <div class="row"><button class="btn pri" id="enrich">Buscar dados de todos</button></div>
         </div>
         <div class="box">
-          <h2>💾 Backup</h2>
+          <h2><svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg>Backup</h2>
           <p>Exporte um backup da sua lista para guardar ou levar para outro aparelho.</p>
           <div class="row"><button class="btn" id="exp">Exportar</button><button class="btn" id="imp">Importar</button><input type="file" id="file" accept="application/json" hidden></div>
         </div>
         <div class="box" id="wipebox">
-          <h2>🗑 Apagar filmes “Quero ver”</h2>
+          <h2><svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>Apagar filmes “Quero ver”</h2>
           <p>Remove da lista só os filmes marcados como “Quero ver”. Os filmes já assistidos, com suas notas e anotações, continuam. Se você estiver conectado, eles também saem da nuvem. Exporte um backup antes se quiser guardar uma cópia.</p>
           <div class="row"><button class="btn danger" id="wipe1">Apagar filmes “Quero ver”</button></div>
           <div class="wipestep" id="wipeA" hidden>
@@ -201,7 +201,7 @@
 
 <div id="modal" class="modal" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-label="Detalhes do filme">
-    <button class="mx" data-act="close" aria-label="Fechar">✕</button>
+    <button class="mx" data-act="close" aria-label="Fechar"><svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     <div id="mbody"></div>
   </div>
 </div>

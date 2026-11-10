@@ -76,6 +76,7 @@ const posterImg=(m,w)=>m.tmdb&&m.tmdb.poster?`<img src="${IMG}${w}${m.tmdb.poste
 function stars(id,v){let h='';for(let i=1;i<=5;i++)h+=`<button class="st${i<=v?' on':''}" data-act="star" data-id="${id}" data-v="${i}" aria-label="${i} estrelas">★</button>`;return h;}
 const starsStatic=v=>v?`<span class="sst">${'★'.repeat(v)}<i>${'★'.repeat(5-v)}</i></span>`:'';
 const chips=t=>t&&t.genres&&t.genres.length?`<div class="chips">${t.genres.map(g=>`<span class="gc">${esc(g)}</span>`).join('')}</div>`:'';
+const IC={cloud:'<svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 010-8 5.5 5.5 0 0110.6 1.4A3.3 3.3 0 0117 18z"/></svg>',film:'<svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg>',trash:'<svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>'};
 const idle=(a,b)=>`<div class="rc idle"><div class="rbody"><small class="kick">${a}</small><h2>${b}</h2></div></div>`;
 
 /* ---------- Roleta ---------- */
@@ -138,7 +139,7 @@ function spin(){
   const final=-(idx+.5)*a+off;
   const delta=((final-rot)%TAU+TAU)%TAU+TAU*(5+Math.floor(Math.random()*3));
   const start=rot,dur=5200+Math.random()*1200,t0=performance.now();
-  setBackdrop(null);$('#res').innerHTML=idle('Girando…','🎞️');
+  setBackdrop(null);$('#res').innerHTML=idle('Girando…',IC.film);
   (function f(now){
     const p=Math.min((now-t0)/dur,1);rot=start+delta*(1-Math.pow(1-p,4));tick=Math.floor((now-t0)/110);draw();
     if(p<1)requestAnimationFrame(f);
@@ -173,7 +174,7 @@ function renderIdleReel(){
 }
 function spinList(){
   const P=pool();if(spinning||!P.length)return;
-  lock(true);setBackdrop(null);$('#res').innerHTML=idle('Girando…','🎞️');
+  lock(true);setBackdrop(null);$('#res').innerHTML=idle('Girando…',IC.film);
   const win=P[Math.floor(Math.random()*P.length)],L=Math.max(45,P.length*2),W=4,arr=[];let prev=null;
   for(let i=0;i<L;i++){let m;do{m=P[Math.floor(Math.random()*P.length)];}while(P.length>1&&m===prev);arr.push(m);prev=m;}
   arr[W]=win;
@@ -216,7 +217,7 @@ function renderResult(anim){
       ${t?`<div class="info">${esc(infoLine(t))}</div>`:''}
     </div>
     <div class="racts">
-      <button class="btn${m.watched?'':' pri'}" data-act="watch" data-id="${m.id}">${m.watched?'↩ Desmarcar':'✓ Assistido'}</button>
+      <button class="btn${m.watched?'':' pri'}" data-act="watch" data-id="${m.id}">${m.watched?'Desmarcar como assistido':'Marcar como assistido'}</button>
       <button class="btn" data-act="open" data-id="${m.id}">Detalhes</button>
     </div></div>`;
 }
@@ -274,7 +275,7 @@ function renderModal(){
       <div class="row">
         <label class="check"><input type="checkbox" data-act="watchbox" data-id="${m.id}" ${m.watched?'checked':''}> Já assisti</label>
       </div>
-      <div class="row"><button class="btn danger" data-act="del" data-id="${m.id}">🗑 Excluir filme</button></div>
+      <div class="row"><button class="btn danger" data-act="del" data-id="${m.id}">${IC.trash}Excluir filme</button></div>
     </div></div>`;
 }
 function friendCode(){
@@ -397,7 +398,7 @@ const msg=t=>$('#cfgMsg').textContent=t;
 $('#saveKey').addEventListener('click',async()=>{
   state.key=$('#key').value.trim();saveLocal();
   if(!state.key){msg('Chave removida.');return;}
-  msg('Testando…');try{await tm('/configuration');msg('✅ Conectado ao TMDB!');}catch(e){msg('❌ Não conectou ('+e.message+'). Confira se copiou a chave inteira.');}
+  msg('Testando…');try{await tm('/configuration');msg('Conectado ao TMDB.');}catch(e){msg('Não conectou ('+e.message+'). Confira se copiou a chave inteira.');}
 });
 $('#enrich').addEventListener('click',async()=>{
   if(!tkey()){msg('Cole e salve sua chave primeiro.');return;}
@@ -590,7 +591,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&sb&&user&
 
 /* ---------- Nuvem (Supabase) ---------- */
 let sb=null,user=null,pushTimer=null,cloudIds=new Set(),pulledFor=null;
-const setSync=t=>{const el=$('#syncMsg');if(el)el.textContent=t;};
+const setSync=(t,k)=>{const el=$('#syncMsg');if(el){el.textContent=t;el.className='stats'+(k?' '+k:'');}};
 const toRow=(m,i)=>({id:m.id,user_id:user.id,pos:i,title:m.title,color:m.color,watched:!!m.watched,rating:m.rating||0,note:m.note||'',tmdb:m.tmdb||null,miss:!!m.miss});
 const fromRow=r=>({id:r.id,title:r.title,color:r.color,watched:r.watched,rating:r.rating,note:r.note||'',tmdb:r.tmdb||null,miss:r.miss});
 function schedulePush(){if(!sb||!user)return;clearTimeout(pushTimer);setSync('⏳ Salvando…');pushTimer=setTimeout(pushAll,800);}
@@ -600,20 +601,20 @@ async function pushAll(){
     if(state.movies.length){const {error}=await sb.from('movies').upsert(state.movies.map(toRow));if(error)throw error;}
     const gone=[...cloudIds].filter(id=>!state.movies.some(m=>m.id===id));
     if(gone.length){const {error}=await sb.from('movies').delete().in('id',gone);if(error)throw error;}
-    cloudIds=new Set(state.movies.map(m=>m.id));setSync('☁️ Salvo na nuvem');
-  }catch(e){setSync('⚠️ Erro ao salvar: '+(e.message||e));}
+    cloudIds=new Set(state.movies.map(m=>m.id));setSync('Salvo na nuvem.','ok');
+  }catch(e){setSync('Erro ao salvar: '+(e.message||e),'bad');}
 }
 async function pullCloud(){
-  setSync('⏳ Carregando sua lista…');pullProfile();loadFriends();
+  setSync('Carregando sua lista…');pullProfile();loadFriends();
   const {data,error}=await sb.from('movies').select('*').order('pos');
-  if(error){setSync('⚠️ '+error.message);return;}
+  if(error){setSync(error.message,'bad');return;}
   if(data.length){
     state.movies=data.map(fromRow);cloudIds=new Set(data.map(r=>r.id));
     if(lastId&&!byId(lastId)){lastId=null;$('#res').innerHTML=idle('Seu filme será…','?');}
-    saveLocal();refreshUI();setSync('☁️ Lista sincronizada');
+    saveLocal();refreshUI();setSync('Lista sincronizada.','ok');
   }else{
     state.movies.forEach(m=>{if(!isUuid(m.id))m.id=uid();});
-    await pushAll();saveLocal();setSync('☁️ Sua lista foi enviada para a nuvem');
+    await pushAll();saveLocal();setSync('Sua lista foi enviada para a nuvem.','ok');
   }
 }
 function renderAuth(){
@@ -621,7 +622,7 @@ function renderAuth(){
   $('#authIn').hidden=!sb||!!user;
   $('#authOut').hidden=!sb||!user;
   $('#who').textContent=user?user.email:'';
-  const chip=$('#loginChip');chip.hidden=!sb;chip.textContent=user?'☁️ '+user.email.split('@')[0]:'☁️ Entrar para sincronizar';renderProfile();
+  const chip=$('#loginChip');chip.hidden=!sb;chip.innerHTML=IC.cloud+esc(user?user.email.split('@')[0]:'Entrar para sincronizar');renderProfile();
 }
 let authMode='in',authBusy=false;
 function setAuthMode(m){
@@ -647,18 +648,18 @@ const authErr=e=>{
 async function authDo(){
   if(authBusy)return;
   const email=$('#email').value.trim(),password=$('#pass').value,kind=authMode;
-  if(!/^\S+@\S+\.\S+$/.test(email)){setSync('❌ Informe um e-mail válido.');$('#email').focus();return;}
-  if(password.length<6){setSync('❌ A senha precisa ter pelo menos 6 caracteres.');$('#pass').focus();return;}
-  authBusy=true;$('#authGo').disabled=true;setSync('⏳ Aguarde…');
+  if(!/^\S+@\S+\.\S+$/.test(email)){setSync('Informe um e-mail válido.','bad');$('#email').focus();return;}
+  if(password.length<6){setSync('A senha precisa ter pelo menos 6 caracteres.','bad');$('#pass').focus();return;}
+  authBusy=true;$('#authGo').disabled=true;setSync('Aguarde…');
   try{
     const {data,error}=await(kind==='up'?sb.auth.signUp({email,password}):sb.auth.signInWithPassword({email,password}));
-    if(error){setSync('❌ '+authErr(error));return;}
+    if(error){setSync(authErr(error),'bad');return;}
     if(kind==='up'){
-      if(data.user&&Array.isArray(data.user.identities)&&!data.user.identities.length){setSync('❌ Esse e-mail já tem conta. Use “Entrar”.');return;}
-      if(!data.session){setSync('📧 Conta criada! Confirme pelo e-mail que você recebeu e depois toque em Entrar.');setAuthMode('in');setSync('📧 Conta criada! Confirme pelo e-mail que você recebeu e depois toque em Entrar.');return;}
+      if(data.user&&Array.isArray(data.user.identities)&&!data.user.identities.length){setSync('Esse e-mail já tem conta. Use “Entrar”.','bad');return;}
+      if(!data.session){setAuthMode('in');setSync('Conta criada. Confirme pelo e-mail que você recebeu e depois toque em Entrar.','ok');return;}
     }
-    $('#pass').value='';setSync(kind==='up'?'✅ Conta criada! Você já está conectado.':'✅ Conectado.');
-  }catch(e){setSync('❌ '+authErr(e));}
+    $('#pass').value='';setSync(kind==='up'?'Conta criada. Você já está conectado.':'Conectado.','ok');
+  }catch(e){setSync(authErr(e),'bad');}
   finally{authBusy=false;$('#authGo').disabled=false;}
 }
 if(window.supabase&&/^https:\/\//.test(window.SUPABASE_URL||'')&&window.SUPABASE_KEY&&!/COLE/.test(window.SUPABASE_KEY)){
