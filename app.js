@@ -307,7 +307,7 @@ $('#file').addEventListener('change',async e=>{
 });
 
 /* ---------- Nuvem (Supabase) ---------- */
-let sb=null,user=null,pushTimer=null,cloudIds=new Set();
+let sb=null,user=null,pushTimer=null,cloudIds=new Set(),pulledFor=null;
 const setSync=t=>{const el=$('#syncMsg');if(el)el.textContent=t;};
 const toRow=(m,i)=>({id:m.id,user_id:user.id,pos:i,title:m.title,color:m.color,watched:!!m.watched,rating:m.rating||0,note:m.note||'',tmdb:m.tmdb||null,miss:!!m.miss});
 const fromRow=r=>({id:r.id,title:r.title,color:r.color,watched:r.watched,rating:r.rating,note:r.note||'',tmdb:r.tmdb||null,miss:r.miss});
@@ -326,8 +326,8 @@ async function pullCloud(){
   const {data,error}=await sb.from('movies').select('*').order('pos');
   if(error){setSync('⚠️ '+error.message);return;}
   if(data.length){
-    state.movies=data.map(fromRow);cloudIds=new Set(data.map(r=>r.id));lastId=null;
-    $('#res').innerHTML=idle('Seu filme será…','?');
+    state.movies=data.map(fromRow);cloudIds=new Set(data.map(r=>r.id));
+    if(lastId&&!byId(lastId)){lastId=null;$('#res').innerHTML=idle('Seu filme será…','?');}
     saveLocal();refreshUI();setSync('☁️ Lista sincronizada');
   }else{
     state.movies.forEach(m=>{if(!isUuid(m.id))m.id=uid();});
@@ -353,8 +353,8 @@ if(window.supabase&&/^https:\/\//.test(window.SUPABASE_URL||'')&&window.SUPABASE
   sb=window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_KEY);
   sb.auth.onAuthStateChange((ev,session)=>{
     user=session?session.user:null;renderAuth();
-    if(user&&(ev==='INITIAL_SESSION'||ev==='SIGNED_IN'))setTimeout(pullCloud,0);
-    if(!user){cloudIds=new Set();if(ev==='SIGNED_OUT')setSync('Você saiu da conta.');}
+    if(user&&(ev==='INITIAL_SESSION'||ev==='SIGNED_IN')&&pulledFor!==user.id){pulledFor=user.id;setTimeout(pullCloud,0);}
+    if(!user){pulledFor=null;cloudIds=new Set();if(ev==='SIGNED_OUT')setSync('Você saiu da conta.');}
   });
   $('#inBtn').addEventListener('click',()=>authDo('in'));
   $('#upBtn').addEventListener('click',()=>authDo('up'));
