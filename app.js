@@ -1,5 +1,4 @@
 const KEY='roleta-cinema-v2', UIKEY='roleta-ui-v1', TAU=Math.PI*2, IMG='https://image.tmdb.org/t/p/';
-const SEED=["Whiplash","Amélie Poulain","Green Book","V de Vingança","Harry Potter e a Pedra Filosofal","Harry Potter e a Câmara Secreta","Harry Potter e o Prisioneiro de Azkaban","Harry Potter e o Cálice de Fogo","Harry Potter e a Ordem da Fênix","Harry Potter e o Enigma do Príncipe","Harry Potter e as Relíquias da Morte: Parte 1","Harry Potter e as Relíquias da Morte: Parte 2","Gran Torino","O Grande Hotel Budapeste","Ford vs Ferrari","Parasita","O Iluminado","O Sexto Sentido","O Poderoso Chefão","O Poderoso Chefão II","O Poderoso Chefão III","À Espera de um Milagre","Kill Bill","Efeito Borboleta","Brilho Eterno de uma Mente sem Lembranças","A Caça","O Labirinto do Fauno","Sociedade dos Poetas Mortos","A Outra História Americana","O Grande Truque","Quem Quer Ser um Milionário?","As Aventuras de Pi","Tenet"];
 const $=s=>document.querySelector(s);
 const uid=()=>crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);});
 const isUuid=v=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
@@ -13,7 +12,7 @@ const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(
 let state;
 function load(){
   try{const r=localStorage.getItem(KEY);if(r){const s=JSON.parse(r);if(s&&Array.isArray(s.movies))return s;}}catch(e){}
-  return {incWatched:false,key:'',movies:SEED.map((t,i)=>({id:uid(),title:t,color:hsl2hex(i*360/SEED.length,62,38),watched:false,rating:0,note:'',tmdb:null}))};
+  return {incWatched:false,key:'',movies:[]};
 }
 function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
 function save(){saveLocal();schedulePush();}
@@ -99,7 +98,7 @@ function draw(){
   ctx.shadowBlur=0;
   if(!n){
     ctx.beginPath();ctx.arc(0,0,Rs,0,TAU);ctx.fillStyle='#3a3a3a';ctx.fill();
-    ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font=`600 ${W*.04}px system-ui`;ctx.fillText('Nenhum filme disponível',0,-W*.12);
+    ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font=`600 ${W*.04}px system-ui`;ctx.fillText(state.movies.length?'Nenhum filme disponível':'Sua lista está vazia',0,W*.2);if(!state.movies.length){ctx.font=`${W*.03}px system-ui`;ctx.fillText('Adicione filmes em “Meus filmes”',0,W*.26);}
     ctx.restore();return;
   }
   const a=TAU/n;
@@ -195,7 +194,7 @@ function renderList(){
     <div class="cv">${posterImg(m,'w154')}</div>
     <div class="tt"><b>${esc(m.title)}</b><span class="sub">${m.tmdb&&m.tmdb.year?esc(m.tmdb.year):''}${starsStatic(m.rating)}</span></div>
     <span class="bdg${m.watched?' ok':''}">${m.watched?'Assistido':'Quero ver'}</span>
-  </div>`).join(''):'<div class="stats center" style="padding:24px 0">Nenhum filme encontrado.</div>';
+  </div>`).join(''):`<div class="stats center" style="padding:24px 0">${state.movies.length?'Nenhum filme encontrado.':'Sua lista está vazia. Use “Adicionar filme” acima.'}</div>`;
 }
 
 /* ---------- Detalhes (modal) ---------- */
@@ -234,7 +233,8 @@ function renderProfile(){
   $('#mycode').textContent=friendCode();
   $('#pfSync').textContent=user?'Conectado como '+user.email:'Sem conta conectada.';
 }
-function refreshUI(){draw();renderPoolInfo();renderList();renderResult();renderModal();renderProfile();}
+function renderIdleHint(){if(lastId||spinning)return;$('#res').innerHTML=state.movies.length?idle('Seu filme será…','?'):idle('Sua lista está vazia','Adicione seu primeiro filme');}
+function refreshUI(){renderIdleHint();draw();renderPoolInfo();renderList();renderResult();renderModal();renderProfile();}
 function refresh(){save();refreshUI();}
 
 /* ---------- Adicionar / buscar ---------- */
@@ -408,4 +408,5 @@ $('#loginChip').addEventListener('click',()=>setTab(user?'perfil':'ajustes'));
 
 /* ---------- Início ---------- */
 $('#inc').checked=state.incWatched;$('#key').value=state.key||'';
-renderCgrid();applyUI();fit();renderPoolInfo();renderList();renderAuth();renderProfile();
+renderCgrid();applyUI();fit();renderPoolInfo();renderList();renderAuth();renderProfile();renderIdleHint();
+if(!state.movies.length){setTab('filmes');$('#addbox').open=true;}
