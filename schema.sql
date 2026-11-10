@@ -54,3 +54,71 @@ create policy "Criar o próprio perfil" on public.profiles
 create policy "Editar o próprio perfil" on public.profiles
   for update to authenticated
   using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+
+-- ---------------------------------------------------------------
+-- Amigos: convites com aceite. O amigo enxerga apenas os filmes ASSISTIDOS
+-- (título, capa e nota). Anotações e a fila "Quero ver" continuam privadas.
+-- ---------------------------------------------------------------
+create table if not exists public.friendships (
+  id uuid primary key default gen_random_uuid(),
+  requester uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  addressee uuid not null references auth.users(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending','accepted')),
+  created_at timestamptz not null default now(),
+  check (requester <> addressee)
+);
+
+-- impede convite duplicado, inclusive no sentido contrário
+create unique index if not exists friendships_pair_idx
+  on public.friendships (least(requester, addressee), greatest(requester, addressee));
+
+alter table public.friendships enable row level security;
+
+create policy "Ver as próprias amizades" on public.friendships
+  for select to authenticated
+  using ((select auth.uid()) in (requester, addressee));
+
+create policy "Enviar convite" on public.friendships
+  for insert to authenticated
+  with check ((select auth.uid()) = requester and status = 'pending');
+
+create policy "Aceitar convite recebido" on public.friendships
+  for update to authenticated
+  using ((select auth.uid()) = addressee)
+  with check ((select auth.uid()) = addressee and status = 'accepted');
+
+create policy "Desfazer amizade ou convite" on public.friendships
+  for delete to authenticated
+  using ((select auth.uid()) in (requester, addressee));
+
+-- Procura uma pessoa pelo @ ou pelo código de amigo (RC-XXXX-XXXX)
+create or replace function public.find_profile(q text)
+returns table(user_id uuid, username text, name text)
+language sql security definer set search_path = public as $$
+  select p.user_id, p.username, p.name
+  from public.profiles p
+  where p.username = lower(regexp_replace(trim(q), '^@', ''))
+     or upper('RC-' || substr(replace(p.user_id::text, '-', ''), 1, 4) || '-' || substr(replace(p.user_id::text, '-', ''), 5, 4)) = upper(trim(q))
+  limit 1;
+$$;
+
+-- Filmes assistidos de um amigo (sem anotações)
+create or replace function public.friend_movies(friend uuid)
+returns table(id uuid, title text, color text, rating int, tmdb jsonb, pos int)
+language sql security definer set search_path = public as $$
+  select m.id, m.title, m.color, m.rating, m.tmdb, m.pos
+  from public.movies m
+  where m.user_id = friend and m.watched
+    and exists (
+      select 1 from public.friendships f
+      where f.status = 'accepted'
+        and ((f.requester = auth.uid() and f.addressee = friend)
+          or (f.addressee = auth.uid() and f.requester = friend))
+    )
+  order by m.pos;
+$$;
+
+revoke all on function public.find_profile(text) from public, anon;
+revoke all on function public.friend_movies(uuid) from public, anon;
+grant execute on function public.find_profile(text) to authenticated;
+grant execute on function public.friend_movies(uuid) to authenticated;

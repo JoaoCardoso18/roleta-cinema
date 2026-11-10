@@ -96,7 +96,7 @@
         <div class="box">
           <label class="lab">Seu código de amigo</label>
           <div class="code"><code id="mycode">RC-····-····</code><button class="btn" data-act="copycode">Copiar</button></div>
-          <p class="stats">Será usado para adicionar amigos quando esse recurso chegar.</p>
+          <p class="stats">Passe esse código, ou o seu @, para um amigo te adicionar. Defina seu @ no lápis acima.</p>
         </div>
         <div class="box">
           <label class="lab">Último sorteado</label>
@@ -110,13 +110,13 @@
       </section>
 
       <section class="pb" id="t-amigos">
-        <div class="box">
-          <span class="soon">Em breve</span>
-          <label class="lab">Adicionar amigo</label>
-          <input type="text" placeholder="@username ou código RC-XXXX-XXXX" autocomplete="off" disabled>
-          <button class="btn pri" disabled>Enviar convite</button>
-        </div>
-        <p class="stats">Aqui você vai poder adicionar amigos por username ou por código, comparar notas e sortear um filme em comum.</p>
+        <form class="box" id="frAdd">
+          <label class="lab" for="frQ">Adicionar amigo</label>
+          <input type="text" id="frQ" placeholder="@username ou código RC-XXXX-XXXX" autocomplete="off" autocapitalize="none" spellcheck="false">
+          <div class="hint" id="frMsg"></div>
+          <button type="submit" class="btn pri" id="frSend">Enviar convite</button>
+        </form>
+        <div id="frBody"></div>
       </section>
 
       <section class="pb" id="t-ajustes">
@@ -184,7 +184,7 @@
     <button class="ib expand" data-act="togglepanel" aria-label="Expandir ou recolher painel"><svg class="chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
     <button class="rt" data-t="filmes" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg><span class="tip">Meus filmes</span></button>
     <button class="rt" data-t="perfil" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg><span class="tip">Perfil</span></button>
-    <button class="rt" data-t="amigos" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.3-5 6.5-5s5.7 1.5 6.5 5M16 4.5a3.5 3.5 0 010 7M18 15c2 .6 3.2 2.3 3.5 5"/></svg><span class="tip">Amigos</span></button>
+    <button class="rt" data-t="amigos" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.3-5 6.5-5s5.7 1.5 6.5 5M16 4.5a3.5 3.5 0 010 7M18 15c2 .6 3.2 2.3 3.5 5"/></svg><span class="dot" id="frDot" hidden></span><span class="tip">Amigos</span></button>
     <div class="sp"></div>
     <button class="rt" data-t="ajustes" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 01-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 010-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 014 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 010 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg><span class="tip">Ajustes</span></button>
   </nav>

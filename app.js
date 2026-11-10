@@ -315,7 +315,7 @@ async function doSearch(){
 /* ---------- Painel lateral ---------- */
 const app=$('#app'),PT={filmes:'Meus filmes',perfil:'Perfil',amigos:'Amigos',ajustes:'Ajustes'};let panelTab='filmes';
 function openPanel(v){app.classList.toggle('open',v);document.querySelectorAll('.rt').forEach(b=>b.setAttribute('aria-selected',v&&b.dataset.t===panelTab));setTimeout(fit,320);}
-function setTab(t){panelTab=t;$('#ptitle').textContent=PT[t];document.querySelectorAll('.pb').forEach(p=>p.classList.toggle('on',p.id==='t-'+t));openPanel(true);}
+function setTab(t){if(t==='amigos')loadFriends();panelTab=t;$('#ptitle').textContent=PT[t];document.querySelectorAll('.pb').forEach(p=>p.classList.toggle('on',p.id==='t-'+t));openPanel(true);}
 
 /* ---------- Eventos ---------- */
 btn.addEventListener('click',go);$('#spin2').addEventListener('click',go);
@@ -332,6 +332,19 @@ document.addEventListener('click',async e=>{
   if(act==='closepanel'){openPanel(false);return;}
   if(act==='togglepanel'){openPanel(!app.classList.contains('open'));return;}
   if(act==='gocfg'){setTab('ajustes');return;}
+  if(act==='fr-open'){openFriend(el.dataset.uid);return;}
+  if(act==='fr-back'){fr.view=null;fr.movies=null;renderFriends();return;}
+  if(act==='fr-accept'){const {error}=await sb.from('friendships').update({status:'accepted'}).eq('id',el.dataset.fid);if(error)frMsg('Erro ao aceitar: '+error.message,'bad');await loadFriends();return;}
+  if(act==='fr-remove'){
+    if(el.dataset.armed||!el.dataset.back){
+      const {error}=await sb.from('friendships').delete().eq('id',el.dataset.fid);
+      if(error)frMsg('Erro: '+error.message,'bad');else if(el.dataset.back){fr.view=null;fr.movies=null;}
+      await loadFriends();
+    }else{
+      const old=el.textContent;el.dataset.armed=1;el.textContent='Toque de novo para confirmar';
+      setTimeout(()=>{el.dataset.armed='';el.textContent=old;},2800);
+    }
+    return;}
   if(act==='copycode'){const c=$('#mycode').textContent;(navigator.clipboard?navigator.clipboard.writeText(c):Promise.reject()).then(()=>{el.textContent='Copiado';setTimeout(()=>el.textContent='Copiar',1500);},()=>{el.textContent=c;});return;}
   if(act==='theme'){if(el.dataset.t==='custom'&&ui.theme!=='custom'){const cur=THEMES.find(t=>t.id===ui.theme);if(cur)ui.custom=seed(cur);renderCgrid();}ui.theme=el.dataset.t;applyUI();return;}
   if(act==='resetui'){ui.custom=seed(THEMES[0]);renderCgrid();applyUI();return;}
@@ -489,6 +502,80 @@ async function pullProfile(){
     if(error||!data)return;prof={name:data.name||'',user:data.username||''};saveProf();renderProfile();}catch(e){}
 }
 
+/* ---------- Amigos (convite com aceite; amigo vê só os filmes assistidos) ---------- */
+const hue=s=>{let h=0;for(const ch of String(s||'?'))h=(h*31+ch.charCodeAt(0))%360;return h;};
+const fAvatar=(p,big)=>`<div class="fav${big?' big':''}" style="background:hsl(${hue(p.username||p.name)} 45% 36%)">${esc((p.name||p.username||'?').trim().charAt(0).toUpperCase())}</div>`;
+const MISSING=/PGRST205|PGRST202|42P01|42883|schema cache|does not exist/i;
+let fr={rows:[],prof:{},view:null,movies:null,missing:false,err:'',loaded:false};
+const frPeer=r=>r.requester===user.id?r.addressee:r.requester;
+const frP=uid=>fr.prof[uid]||{name:'Usuário',username:''};
+async function loadFriends(){
+  if(!(sb&&user)){fr.rows=[];fr.loaded=false;renderFriends();return;}
+  const {data,error}=await sb.from('friendships').select('*');
+  if(error){fr.missing=MISSING.test((error.code||'')+' '+(error.message||''));fr.err=error.message||'';renderFriends();return;}
+  fr.missing=false;fr.err='';fr.rows=data||[];fr.loaded=true;
+  const ids=[...new Set(fr.rows.map(frPeer))];fr.prof={};
+  if(ids.length){const {data:ps}=await sb.from('profiles').select('user_id,username,name').in('user_id',ids);(ps||[]).forEach(p=>fr.prof[p.user_id]=p);}
+  renderFriends();
+}
+function renderFriends(){
+  const box=$('#frBody'),add=$('#frAdd');
+  const inc=user?fr.rows.filter(r=>r.status==='pending'&&r.addressee===user.id):[];
+  $('#frDot').hidden=!inc.length;
+  add.hidden=!(sb&&user)||!!fr.view||fr.missing;
+  if(!sb){box.innerHTML='<p class="stats">A sincronização não está configurada, então não dá para usar amigos.</p>';return;}
+  if(!user){box.innerHTML='<div class="box"><p>Entre na conta para adicionar amigos e ver o que eles já assistiram.</p><button class="btn pri" data-act="gocfg">Entrar ou criar conta</button></div>';return;}
+  if(fr.missing){box.innerHTML='<div class="box"><p>O recurso de amigos ainda não foi ativado no banco de dados. Rode o bloco “Amigos” do arquivo schema.sql no Supabase e recarregue a página.</p></div>';return;}
+  if(fr.err){box.innerHTML=`<p class="stats">Não foi possível carregar os amigos (${esc(fr.err)}).</p>`;return;}
+  if(fr.view){renderFriendView(box);return;}
+  const out=fr.rows.filter(r=>r.status==='pending'&&r.requester===user.id),acc=fr.rows.filter(r=>r.status==='accepted');
+  const nm=p=>esc(p.name||p.username),us=p=>p.username?'@'+esc(p.username):'';
+  let h='';
+  if(inc.length)h+=`<div class="fsec"><div class="lab">Convites recebidos (${inc.length})</div>${inc.map(r=>{const p=frP(frPeer(r));return `<div class="frow">${fAvatar(p)}<div class="ft"><b>${nm(p)}</b><span class="sub">${us(p)}</span></div><button class="btn pri" data-act="fr-accept" data-fid="${r.id}">Aceitar</button><button class="btn" data-act="fr-remove" data-fid="${r.id}">Recusar</button></div>`;}).join('')}</div>`;
+  h+=`<div class="fsec"><div class="lab">Amigos (${acc.length})</div>${acc.length?acc.map(r=>{const u=frPeer(r),p=frP(u);return `<button class="frow" data-act="fr-open" data-uid="${u}">${fAvatar(p)}<div class="ft"><b>${nm(p)}</b><span class="sub">${us(p)}</span></div><span class="sub">Ver ›</span></button>`;}).join(''):'<div class="stats">Você ainda não tem amigos. Envie um convite pelo @ ou pelo código.</div>'}</div>`;
+  if(out.length)h+=`<div class="fsec"><div class="lab">Convites enviados (${out.length})</div>${out.map(r=>{const p=frP(frPeer(r));return `<div class="frow">${fAvatar(p)}<div class="ft"><b>${nm(p)}</b><span class="sub">Aguardando resposta</span></div><button class="btn" data-act="fr-remove" data-fid="${r.id}">Cancelar</button></div>`;}).join('')}</div>`;
+  box.innerHTML=h;
+}
+function renderFriendView(box){
+  const u=fr.view,p=frP(u),r=fr.rows.find(x=>frPeer(x)===u),mv=fr.movies;
+  let body='<div class="stats">Carregando…</div>';
+  if(mv){
+    const rs=mv.filter(m=>m.rating>0),avg=rs.length?(rs.reduce((s,m)=>s+m.rating,0)/rs.length).toFixed(1):'–';
+    body=`<div class="grid3"><div class="kpi"><b>${mv.length}</b><span>assistidos</span></div><div class="kpi"><b>${rs.length}</b><span>com nota</span></div><div class="kpi"><b>${avg}</b><span>nota média</span></div></div>
+    <div class="fsec"><div class="lab">Filmes assistidos</div>${mv.length?mv.map(m=>{const t=m.tmdb;return `<div class="row-m"><div class="cv">${t&&t.poster?`<img src="${IMG}w154${t.poster}" alt="">`:`<div class="ph" style="--c:${esc(m.color)}"></div>`}</div><div class="tt"><b>${esc(m.title)}</b><span class="sub">${t&&t.year?esc(t.year):''}${starsStatic(m.rating)}</span></div></div>`;}).join(''):'<div class="stats">Ainda não assistiu nenhum filme.</div>'}</div>`;
+  }
+  box.innerHTML=`<button class="back" data-act="fr-back">‹ Voltar</button>
+    <div class="fhead">${fAvatar(p,true)}<div><h3>${esc(p.name||p.username)}</h3><p>${p.username?'@'+esc(p.username):''}</p></div></div>${body}
+    <div class="row">${r?`<button class="btn danger" data-act="fr-remove" data-fid="${r.id}" data-back="1">Remover amigo</button>`:''}</div>`;
+}
+async function openFriend(uid){
+  fr.view=uid;fr.movies=null;renderFriends();
+  const {data,error}=await sb.rpc('friend_movies',{friend:uid});
+  if(fr.view!==uid)return;
+  fr.movies=error?[]:(data||[]);
+  if(error)fr.err='';
+  renderFriends();
+}
+function frMsg(t,c){const h=$('#frMsg');h.textContent=t;h.className='hint'+(c?' '+c:'');}
+async function sendInvite(q){
+  q=q.trim();if(!q){frMsg('Digite o @ ou o código do seu amigo.','bad');return;}
+  $('#frSend').disabled=true;frMsg('Procurando…');
+  try{
+    const {data,error}=await sb.rpc('find_profile',{q});
+    if(error){frMsg(MISSING.test((error.code||'')+' '+(error.message||''))?'Recurso ainda não ativado no banco. Rode o bloco “Amigos” do schema.sql.':'Erro na busca: '+error.message,'bad');return;}
+    if(!data||!data.length){frMsg('Ninguém encontrado. A pessoa precisa ter definido o @ no perfil.','bad');return;}
+    const p=data[0];
+    if(p.user_id===user.id){frMsg('Esse é o seu próprio perfil.','bad');return;}
+    const ex=fr.rows.find(r=>frPeer(r)===p.user_id);
+    if(ex){frMsg(ex.status==='accepted'?'Vocês já são amigos.':(ex.requester===user.id?'Você já enviou um convite para essa pessoa.':'Essa pessoa já te enviou um convite. Aceite abaixo.'),'bad');return;}
+    const {error:e2}=await sb.from('friendships').insert({addressee:p.user_id});
+    if(e2){frMsg(e2.code==='23505'?'Já existe um convite ou amizade com essa pessoa.':'Erro ao enviar: '+e2.message,'bad');return;}
+    $('#frQ').value='';frMsg(`Convite enviado para ${p.name||p.username}.`,'ok');await loadFriends();
+  }finally{$('#frSend').disabled=false;}
+}
+$('#frAdd').addEventListener('submit',e=>{e.preventDefault();if(sb&&user)sendInvite($('#frQ').value);});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&sb&&user&&!fr.view)loadFriends();});
+
 /* ---------- Nuvem (Supabase) ---------- */
 let sb=null,user=null,pushTimer=null,cloudIds=new Set(),pulledFor=null;
 const setSync=t=>{const el=$('#syncMsg');if(el)el.textContent=t;};
@@ -505,7 +592,7 @@ async function pushAll(){
   }catch(e){setSync('⚠️ Erro ao salvar: '+(e.message||e));}
 }
 async function pullCloud(){
-  setSync('⏳ Carregando sua lista…');pullProfile();
+  setSync('⏳ Carregando sua lista…');pullProfile();loadFriends();
   const {data,error}=await sb.from('movies').select('*').order('pos');
   if(error){setSync('⚠️ '+error.message);return;}
   if(data.length){
@@ -537,7 +624,7 @@ if(window.supabase&&/^https:\/\//.test(window.SUPABASE_URL||'')&&window.SUPABASE
   sb.auth.onAuthStateChange((ev,session)=>{
     user=session?session.user:null;renderAuth();
     if(user&&(ev==='INITIAL_SESSION'||ev==='SIGNED_IN')&&pulledFor!==user.id){pulledFor=user.id;setTimeout(pullCloud,0);}
-    if(!user){pulledFor=null;cloudIds=new Set();if(ev==='SIGNED_OUT'){setSync('Você saiu da conta.');prof={name:'',user:''};saveProf();renderProfile();}}
+    if(!user){pulledFor=null;cloudIds=new Set();if(ev==='SIGNED_OUT'){setSync('Você saiu da conta.');prof={name:'',user:''};saveProf();renderProfile();fr={rows:[],prof:{},view:null,movies:null,missing:false,err:'',loaded:false};renderFriends();}}
   });
   $('#inBtn').addEventListener('click',()=>authDo('in'));
   $('#upBtn').addEventListener('click',()=>authDo('up'));
@@ -547,5 +634,5 @@ $('#loginChip').addEventListener('click',()=>setTab(user?'perfil':'ajustes'));
 
 /* ---------- Início ---------- */
 $('#inc').checked=state.incWatched;$('#key').value=state.key||'';
-renderCgrid();applyUI();setMode(ui.mode);renderFbar();lock(false);renderPoolInfo();renderList();renderAuth();renderProfile();renderIdleHint();
+renderCgrid();applyUI();setMode(ui.mode);renderFbar();lock(false);renderPoolInfo();renderList();renderAuth();renderProfile();renderFriends();renderIdleHint();
 if(!state.movies.length){setTab('filmes');$('#addbox').open=true;}
