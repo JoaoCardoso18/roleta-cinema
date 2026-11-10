@@ -3,3 +3,7 @@
 // NUNCA coloque aqui a chave "service_role" ou "secret".
 window.SUPABASE_URL = 'https://xvggfgzeraxprtkvmrcp.supabase.co';
 window.SUPABASE_KEY = 'sb_publishable_-3VPULTXSOpttXoVyXgA0Q_wRJloG62';
+
+// Chave padrão do TMDB (v3, somente leitura). Usada quando a pessoa não colou a própria nos Ajustes.
+// Se um dia vazar ou abusarem, é só gerar outra em themoviedb.org/settings/api e trocar aqui.
+window.TMDB_DEFAULT_KEY = '0f921279d8f3b0964e4efdb5267537e9';

@@ -57,8 +57,9 @@ function applyUI(){
 }
 
 /* ---------- TMDB ---------- */
+const tkey=()=>(state.key||'').trim()||String(window.TMDB_DEFAULT_KEY||'').trim();
 async function tm(path,params={}){
-  const k=(state.key||'').trim();if(!k)throw new Error('sem chave');
+  const k=tkey();if(!k)throw new Error('sem chave');
   const u=new URL('https://api.themoviedb.org/3'+path);u.searchParams.set('language','pt-BR');
   for(const [a,b] of Object.entries(params))u.searchParams.set(a,b);
   const opt={};if(k.length>40)opt.headers={Authorization:'Bearer '+k};else u.searchParams.set('api_key',k);
@@ -200,7 +201,7 @@ function setBackdrop(m){
   else bd.classList.remove('on');
 }
 async function ensureBackdrop(m){
-  if(!m.tmdb||m.tmdb.backdrop!==undefined||!(state.key||'').trim())return;
+  if(!m.tmdb||m.tmdb.backdrop!==undefined||!tkey())return;
   try{const d=await details(m.tmdb.id);m.tmdb=d;save();if(lastId===m.id&&!spinning)setBackdrop(m);renderModal();}catch(e){}
 }
 function renderResult(anim){
@@ -302,7 +303,7 @@ function addMovie(o){
 }
 async function doSearch(){
   const q=$('#newTitle').value.trim();if(!q)return;
-  if(!(state.key||'').trim()){addMovie({title:q});return;}
+  if(!tkey()){addMovie({title:q});return;}
   $('#results').innerHTML='<div class="stats">Buscando…</div>';
   try{
     found=(await tm('/search/movie',{query:q})).results.slice(0,6);
@@ -399,7 +400,7 @@ $('#saveKey').addEventListener('click',async()=>{
   msg('Testando…');try{await tm('/configuration');msg('✅ Conectado ao TMDB!');}catch(e){msg('❌ Não conectou ('+e.message+'). Confira se copiou a chave inteira.');}
 });
 $('#enrich').addEventListener('click',async()=>{
-  if(!(state.key||'').trim()){msg('Cole e salve sua chave primeiro.');return;}
+  if(!tkey()){msg('Cole e salve sua chave primeiro.');return;}
   const todo=state.movies.filter(m=>(!m.tmdb&&!m.miss)||(m.tmdb&&m.tmdb.backdrop===undefined));if(!todo.length){msg('Todos os filmes já têm dados.');return;}
   let n=0;$('#enrich').disabled=true;
   for(const m of todo){
@@ -499,7 +500,18 @@ $('#pform').addEventListener('submit',async e=>{
 });
 async function pullProfile(){
   try{const {data,error}=await sb.from('profiles').select('username,name').eq('user_id',user.id).maybeSingle();
-    if(error||!data)return;prof={name:data.name||'',user:data.username||''};saveProf();renderProfile();}catch(e){}
+    if(error)return;
+    if(data){prof={name:data.name||'',user:data.username||''};saveProf();renderProfile();return;}
+    // sem perfil na nuvem ainda: cria um com o nome/@ atuais (ou o padrão do e-mail), para os amigos conseguirem te achar
+    let base=(cleanUser(pUser())||'').slice(0,16);if(base.length<3)base=(base+'user').slice(0,16);
+    const name=(pName()||base).slice(0,30);
+    for(let i=0;i<4;i++){
+      const uname=i?base+Math.floor(Math.random()*900+100):base;
+      const {error:e2}=await sb.from('profiles').upsert({user_id:user.id,username:uname,name});
+      if(!e2){prof={name,user:uname};saveProf();renderProfile();return;}
+      if(e2.code!=='23505')return;
+    }
+  }catch(e){}
 }
 
 /* ---------- Amigos (convite com aceite; amigo vê só os filmes assistidos) ---------- */
@@ -633,6 +645,6 @@ if(window.supabase&&/^https:\/\//.test(window.SUPABASE_URL||'')&&window.SUPABASE
 $('#loginChip').addEventListener('click',()=>setTab(user?'perfil':'ajustes'));
 
 /* ---------- Início ---------- */
-$('#inc').checked=state.incWatched;$('#key').value=state.key||'';
+if(window.TMDB_DEFAULT_KEY)$('#keyDef').textContent='Já existe uma chave padrão do site; só preencha se quiser usar a sua.';$('#inc').checked=state.incWatched;$('#key').value=state.key||'';
 renderCgrid();applyUI();setMode(ui.mode);renderFbar();lock(false);renderPoolInfo();renderList();renderAuth();renderProfile();renderFriends();renderIdleHint();
 if(!state.movies.length){setTab('filmes');$('#addbox').open=true;}
