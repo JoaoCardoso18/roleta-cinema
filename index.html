@@ -143,6 +143,20 @@
           <p>Exporte um backup da sua lista para guardar ou levar para outro aparelho.</p>
           <div class="row"><button class="btn" id="exp">Exportar</button><button class="btn" id="imp">Importar</button><input type="file" id="file" accept="application/json" hidden></div>
         </div>
+        <div class="box" id="wipebox">
+          <h2>🗑 Apagar minha lista</h2>
+          <p>Remove todos os filmes, notas e anotações. Se você estiver conectado, a lista salva na nuvem também é apagada. Exporte um backup antes se quiser guardar uma cópia.</p>
+          <div class="row"><button class="btn danger" id="wipe1">Apagar minha lista</button></div>
+          <div class="wipestep" id="wipeA" hidden>
+            <p id="wipeAmsg"></p>
+            <div class="row"><button class="btn" id="wipeCancelA">Cancelar</button><button class="btn danger arm" id="wipe2">Continuar</button></div>
+          </div>
+          <div class="wipestep" id="wipeB" hidden>
+            <p>Última verificação: digite <b>APAGAR</b> para confirmar. Não dá para desfazer.</p>
+            <input type="text" id="wipeTxt" placeholder="Digite APAGAR" autocomplete="off" autocapitalize="characters" aria-label="Digite APAGAR para confirmar">
+            <div class="row"><button class="btn" id="wipeCancelB">Cancelar</button><button class="btn danger arm" id="wipe3" disabled>Apagar tudo</button></div>
+          </div>
+        </div>
         <div class="stats center" id="cfgMsg"></div>
       </section>
     </div>

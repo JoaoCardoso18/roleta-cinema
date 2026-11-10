@@ -205,6 +205,7 @@ label.check,label.cl{display:flex;align-items:center;gap:8px;cursor:pointer;font
 .theme.sel{border-color:var(--gold)}
 .sw3{display:flex;width:64px;height:24px;border-radius:8px;overflow:hidden;border:1px solid rgba(128,128,128,.4)}
 .sw3 i{flex:1}
+.wipestep{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:12px}
 .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .cf{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 6px 6px 10px;font-size:.82rem;cursor:pointer}
 .cf span{min-width:0}

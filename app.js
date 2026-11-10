@@ -338,6 +338,22 @@ $('#enrich').addEventListener('click',async()=>{
   }
   $('#enrich').disabled=false;refresh();if(n===todo.length)msg('Concluído! Confira em Meus filmes.');
 });
+/* Apagar a lista inteira, com duas verificações: confirmar o aviso e digitar APAGAR */
+function wipeReset(){$('#wipeA').hidden=true;$('#wipeB').hidden=true;$('#wipeTxt').value='';$('#wipe3').disabled=true;$('#wipe1').hidden=false;}
+$('#wipe1').addEventListener('click',()=>{
+  const n=state.movies.length;if(!n){msg('Sua lista já está vazia.');return;}
+  $('#wipeAmsg').textContent=`Isso vai apagar ${n} filme${n===1?'':'s'}, com notas e anotações${user?', inclusive na nuvem':''}. Deseja continuar?`;
+  $('#wipe1').hidden=true;$('#wipeA').hidden=false;
+});
+$('#wipeCancelA').addEventListener('click',wipeReset);
+$('#wipeCancelB').addEventListener('click',wipeReset);
+$('#wipe2').addEventListener('click',()=>{$('#wipeA').hidden=true;$('#wipeB').hidden=false;$('#wipeTxt').focus();});
+$('#wipeTxt').addEventListener('input',e=>{$('#wipe3').disabled=norm(e.target.value.trim())!=='apagar';});
+$('#wipe3').addEventListener('click',()=>{
+  if(norm($('#wipeTxt').value.trim())!=='apagar')return;
+  state.movies=[];lastId=null;closeModal();setBackdrop(null);
+  refresh();wipeReset();msg('Lista apagada.');
+});
 $('#exp').addEventListener('click',()=>{
   const b=new Blob([JSON.stringify({...state,key:''},null,1)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='roleta-cinema-backup.json';a.click();
