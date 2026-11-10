@@ -307,16 +307,26 @@ function renderList(){
 
 /* ---------- Detalhes (modal) ---------- */
 let openId=null;
-function openModal(id){openId=id;renderModal();$('#modal').hidden=false;document.body.classList.add('noscroll');}
+let mtab='info';
+function openModal(id){openId=id;mtab='info';renderModal();$('#modal').hidden=false;document.body.classList.add('noscroll');}
 function closeModal(){openId=null;$('#modal').hidden=true;document.body.classList.remove('noscroll');}
+function franchiseTab(m){
+  const c=m.tmdb&&m.tmdb.col;
+  if(!c)return '<p class="stats">Este filme não faz parte de uma franquia no TMDB'+(m.tmdb?'.':', ou ainda não tem dados. Use Ajustes → Buscar dados de todos.')+'</p>';
+  const mem=state.movies.filter(x=>x.tmdb&&x.tmdb.col&&String(x.tmdb.col.id)===String(c.id)).sort((p,q)=>ordOf(p)-ordOf(q));
+  const cached=colCache[c.id],inList=new Set(mem.map(x=>x.tmdb.id));
+  const rows=[...mem.map(x=>({n:x.tmdb.col.n,t:x.title,y:x.tmdb.year,st:x.watched?'Assistido':'Quero ver',cls:x.watched?'done':'',me:x.id===m.id,tm:x.tmdb.id}))];
+  if(cached)cached.parts.forEach((p,i)=>{if(!inList.has(p.id))rows.push({n:i+1,t:p.title,y:(p.release_date||'').slice(0,4),st:'Fora da lista',cls:'out',me:false,tm:p.id});});
+  rows.sort((p,q)=>(p.n||99)-(q.n||99));
+  const done=mem.filter(x=>x.watched).length,total=Math.max(c.total||0,rows.length);
+  return `<div class="frnote"><div class="frh"><b>Franquia ${esc(c.name)}</b><span>${total} filmes · ${mem.length} na sua lista · ${done} assistidos</span></div>
+    <ul class="fro tall">${rows.map(r=>`<li class="${r.cls}${r.me?' me':''}"><span class="n">${r.n||''}</span><span class="tt">${esc(r.t)}${r.y?' <i>('+esc(r.y)+')</i>':''}</span><span class="st">${r.me?'Este filme':r.st}</span></li>`).join('')}</ul>
+    ${cached?'':'<div class="stats">Carregando os demais filmes da franquia…</div>'}</div>`;
+}
 function renderModal(){
   if(!openId)return;const m=byId(openId);if(!m){closeModal();return;}const t=m.tmdb;
-  $('#mbody').innerHTML=`<div class="md">
-    <div class="mp">${posterImg(m,'w500')}</div>
-    <div class="mi">
-      <input class="mt" type="text" value="${esc(m.title)}" data-act="title" data-id="${m.id}" maxlength="80" aria-label="Título">
-      <div class="info">${t?esc(infoLine(t)):'Sem dados do TMDB ainda (use Ajustes → Buscar dados de todos).'}</div>
-      ${chips(t)}
+  const tabs=`<div class="seg mtabs" role="tablist" aria-label="Seções dos detalhes"><button role="tab" data-act="mtab" data-t="info" aria-pressed="${mtab==='info'}">Detalhes</button><button role="tab" data-act="mtab" data-t="fr" aria-pressed="${mtab==='fr'}">Franquia</button></div>`;
+  const info=`${chips(t)}
       ${t&&t.overview?`<p class="ov">${esc(t.overview)}</p>`:''}
       <div class="lbl">Sua nota</div><div>${stars(m.id,m.rating)}</div>
       <div class="lbl">Anotação</div>
@@ -324,8 +334,16 @@ function renderModal(){
       <div class="row">
         <label class="check"><input type="checkbox" data-act="watchbox" data-id="${m.id}" ${m.watched?'checked':''}> Já assisti</label>
       </div>
-      <div class="row"><button class="btn danger" data-act="del" data-id="${m.id}">${IC.trash}Excluir filme</button></div>
+      <div class="row"><button class="btn danger" data-act="del" data-id="${m.id}">${IC.trash}Excluir filme</button></div>`;
+  $('#mbody').innerHTML=`<div class="md">
+    <div class="mp">${posterImg(m,'w500')}</div>
+    <div class="mi">
+      <h2 class="mt">${esc(m.title)}</h2>
+      <div class="info">${t?esc(infoLine(t)):'Sem dados do TMDB ainda (use Ajustes → Buscar dados de todos).'}</div>
+      ${tabs}
+      ${mtab==='fr'?franchiseTab(m):info}
     </div></div>`;
+  if(mtab==='fr'&&t&&t.col&&!colCache[t.col.id]){const id=t.col.id;collectionInfo(id).then(()=>{if(openId===m.id&&mtab==='fr')renderModal();}).catch(()=>{});}
 }
 function friendCode(){
   if(user)return 'RC-'+user.id.replace(/-/g,'').slice(0,4).toUpperCase()+'-'+user.id.replace(/-/g,'').slice(4,8).toUpperCase();
@@ -392,6 +410,7 @@ document.addEventListener('click',async e=>{
   if(fb){flt=fb.dataset.f;document.querySelectorAll('#filters .btn').forEach(b=>b.classList.toggle('on',b===fb));renderList();return;}
   const el=e.target.closest('[data-act]');if(!el)return;const act=el.dataset.act;
   if(act==='close'){closeModal();return;}
+  if(act==='mtab'){mtab=el.dataset.t==='fr'?'fr':'info';renderModal();return;}
   if(act==='fr-skip'){const id=+$('#frOffer').dataset.id;if(id&&!ui.skipCols.includes(id)){ui.skipCols.push(id);try{localStorage.setItem(UIKEY,JSON.stringify(ui));}catch(e){}}renderFrOffer();return;}
   if(act==='fr-add'){
     const id=+$('#frOffer').dataset.id;if(!id)return;const b=$('#frAddBtn');b.disabled=true;b.textContent='Adicionando…';
@@ -444,7 +463,6 @@ document.addEventListener('change',e=>{
   const el=e.target.closest('[data-act]');if(!el)return;const m=byId(el.dataset.id);if(!m)return;
   if(el.dataset.act==='color')m.color=el.value;
   else if(el.dataset.act==='note')m.note=el.value.trim();
-  else if(el.dataset.act==='title'){const v=el.value.trim();if(v)m.title=v;else el.value=m.title;}
   else if(el.dataset.act==='watchbox')m.watched=el.checked;
   else return;
   refresh();
