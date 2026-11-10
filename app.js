@@ -1,4 +1,4 @@
-const KEY='roleta-cinema-v2', UIKEY='roleta-ui-v1', TAU=Math.PI*2, IMG='https://image.tmdb.org/t/p/';
+const FONT="Manrope,system-ui,sans-serif",KEY='roleta-cinema-v2', UIKEY='roleta-ui-v1', TAU=Math.PI*2, IMG='https://image.tmdb.org/t/p/';
 const $=s=>document.querySelector(s);
 const uid=()=>crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);});
 const isUuid=v=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
@@ -140,7 +140,7 @@ function draw(){
   ctx.shadowBlur=0;
   if(!n){
     ctx.beginPath();ctx.arc(0,0,Rs,0,TAU);ctx.fillStyle='#3a3a3a';ctx.fill();
-    ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font=`600 ${W*.04}px system-ui`;ctx.fillText(state.movies.length?'Nenhum filme disponível':'Sua lista está vazia',0,W*.2);if(!state.movies.length){ctx.font=`${W*.03}px system-ui`;ctx.fillText('Adicione filmes em “Meus filmes”',0,W*.26);}
+    ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font=`600 ${W*.04}px ${FONT}`;ctx.fillText(state.movies.length?'Nenhum filme disponível':'Sua lista está vazia',0,W*.2);if(!state.movies.length){ctx.font=`${W*.03}px ${FONT}`;ctx.fillText('Adicione filmes em “Meus filmes”',0,W*.26);}
     ctx.restore();return;
   }
   const a=TAU/n;
@@ -150,8 +150,8 @@ function draw(){
     const sc=sl.fr?frColor(sl.fr,gold):(i%2?w2:w1);ctx.fillStyle=sc;ctx.fill();ctx.strokeStyle='rgba(255,255,255,.3)';ctx.lineWidth=Math.max(1,W/420);ctx.stroke();
     ctx.save();ctx.rotate(s+a/2);ctx.textAlign='right';ctx.textBaseline='middle';
     const maxW=Rs*.62;let fs=Math.max(Math.min(W*.036,Rs*Math.sin(Math.min(a,Math.PI)/2)*1.25),W*.022);
-    ctx.font=`600 ${fs}px system-ui,sans-serif`;let t=sl.fr?'Franquia '+sl.fr.name:sl.m.title;
-    while(ctx.measureText(t).width>maxW&&fs>W*.02){fs-=1;ctx.font=`600 ${fs}px system-ui,sans-serif`;}
+    ctx.font=`600 ${fs}px ${FONT}`;let t=sl.fr?'Franquia '+sl.fr.name:sl.m.title;
+    while(ctx.measureText(t).width>maxW&&fs>W*.02){fs-=1;ctx.font=`600 ${fs}px ${FONT}`;}
     if(ctx.measureText(t).width>maxW){while(t.length>3&&ctx.measureText(t+'…').width>maxW)t=t.slice(0,-1);t+='…';}
     const tc=txtColor(sc);ctx.fillStyle=tc;ctx.shadowColor=tc==='#fff'?'rgba(0,0,0,.5)':'rgba(255,255,255,.4)';ctx.shadowBlur=3;
     ctx.fillText(t,Rs-W*.03,0);ctx.restore();
@@ -605,7 +605,7 @@ async function pullProfile(){
 
 /* ---------- Amigos (convite com aceite; amigo vê só os filmes assistidos) ---------- */
 const hue=s=>{let h=0;for(const ch of String(s||'?'))h=(h*31+ch.charCodeAt(0))%360;return h;};
-const fAvatar=(p,big)=>`<div class="fav${big?' big':''}" style="background:hsl(${hue(p.username||p.name)} 45% 36%)">${esc((p.name||p.username||'?').trim().charAt(0).toUpperCase())}</div>`;
+const fAvatar=(p,big)=>`<div class="fav${big?' lg':''}" style="background:hsl(${hue(p.username||p.name)} 45% 36%)">${esc((p.name||p.username||'?').trim().charAt(0).toUpperCase())}</div>`;
 const MISSING=/PGRST205|PGRST202|42P01|42883|schema cache|does not exist/i;
 let fr={rows:[],prof:{},view:null,movies:null,missing:false,err:'',loaded:false};
 const frPeer=r=>r.requester===user.id?r.addressee:r.requester;
@@ -790,6 +790,7 @@ if(window.supabase&&/^https:\/\//.test(window.SUPABASE_URL||'')&&window.SUPABASE
 $('#loginChip').addEventListener('click',()=>setTab(user?'perfil':'conta'));
 
 /* ---------- Início ---------- */
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{try{draw();}catch(e){}});
 if(window.TMDB_DEFAULT_KEY)$('#keyDef').textContent='Já existe uma chave padrão do site; só preencha se quiser usar a sua.';$('#inc').checked=state.incWatched;$('#frOn').checked=ui.fr!==false;$('#key').value=state.key||'';
 renderCgrid();applyUI();setMode(ui.mode);renderFbar();lock(false);renderPoolInfo();renderList();renderAuth();renderProfile();renderFriends();renderIdleHint();
 if(!state.movies.length){setTab('filmes');$('#addbox').open=true;}
