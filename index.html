@@ -119,6 +119,29 @@
         <div id="frBody"></div>
       </section>
 
+      <section class="pb" id="t-conta">
+        <p class="cp" id="cloudOff">Sincronização não configurada. Preencha o arquivo config.js (veja o README).</p>
+        <form class="box" id="authIn" hidden novalidate>
+          <div class="seg" id="authSeg" role="group" aria-label="Entrar ou criar conta">
+            <button type="button" data-m="in" aria-pressed="true">Entrar</button>
+            <button type="button" data-m="up" aria-pressed="false">Criar conta</button>
+          </div>
+          <p id="authLead">Entre para guardar sua lista na nuvem, acessá-la em qualquer aparelho e adicionar amigos.</p>
+          <label class="lab" for="email">E-mail</label>
+          <input type="email" id="email" placeholder="voce@email.com" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false">
+          <label class="lab" for="pass">Senha</label>
+          <div class="pw"><input type="password" id="pass" placeholder="Mínimo de 6 caracteres" autocomplete="current-password"><button type="button" class="btn" id="pwShow" aria-pressed="false">Mostrar</button></div>
+          <div class="row"><button type="submit" class="btn pri" id="authGo">Entrar</button></div>
+        </form>
+        <div class="box" id="authOut" hidden>
+          <h2>☁️ Conta conectada</h2>
+          <p>Conectado como <b id="who"></b></p>
+          <p class="stats">Sua lista é sincronizada automaticamente.</p>
+          <div class="row"><button class="btn" id="outBtn">Sair da conta</button></div>
+        </div>
+        <div class="stats" id="syncMsg" role="status" aria-live="polite"></div>
+      </section>
+
       <section class="pb" id="t-ajustes">
         <div class="box">
           <h2>🎨 Aparência</h2>
@@ -140,21 +163,6 @@
           <h2>✨ Preencher dados dos filmes</h2>
           <p>Busca capa, imagem de fundo, sinopse, ano, gênero e diretor para os filmes que ainda não têm dados. Confira depois se algum foi associado ao filme errado.</p>
           <div class="row"><button class="btn pri" id="enrich">Buscar dados de todos</button></div>
-        </div>
-        <div class="box" id="cloud">
-          <h2>☁️ Conta e sincronização</h2>
-          <p id="cloudOff">Sincronização não configurada. Preencha o arquivo config.js (veja o README).</p>
-          <div id="authIn" hidden>
-            <p>Entre para guardar sua lista na nuvem e acessá-la em qualquer aparelho.</p>
-            <input type="text" id="email" placeholder="E-mail" autocomplete="email" inputmode="email">
-            <input type="password" id="pass" placeholder="Senha (mínimo de 6 caracteres)" autocomplete="current-password" style="margin-top:8px">
-            <div class="row" style="margin-top:8px"><button class="btn pri" id="inBtn">Entrar</button><button class="btn" id="upBtn">Criar conta</button></div>
-          </div>
-          <div id="authOut" hidden>
-            <p>Conectado como <b id="who"></b></p>
-            <div class="row"><button class="btn" id="outBtn">Sair</button></div>
-          </div>
-          <div class="stats" id="syncMsg"></div>
         </div>
         <div class="box">
           <h2>💾 Backup</h2>
@@ -186,6 +194,7 @@
     <button class="rt" data-t="perfil" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg><span class="tip">Perfil</span></button>
     <button class="rt" data-t="amigos" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.3-5 6.5-5s5.7 1.5 6.5 5M16 4.5a3.5 3.5 0 010 7M18 15c2 .6 3.2 2.3 3.5 5"/></svg><span class="dot" id="frDot" hidden></span><span class="tip">Amigos</span></button>
     <div class="sp"></div>
+    <button class="rt" data-t="conta" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3M10 17l5-5-5-5M15 12H4"/></svg><span class="tip">Conta</span></button>
     <button class="rt" data-t="ajustes" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 01-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 010-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 014 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 010 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg><span class="tip">Ajustes</span></button>
   </nav>
 </div>

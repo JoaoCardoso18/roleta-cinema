@@ -314,7 +314,7 @@ async function doSearch(){
 }
 
 /* ---------- Painel lateral ---------- */
-const app=$('#app'),PT={filmes:'Meus filmes',perfil:'Perfil',amigos:'Amigos',ajustes:'Ajustes'};let panelTab='filmes';
+const app=$('#app'),PT={filmes:'Meus filmes',perfil:'Perfil',amigos:'Amigos',conta:'Conta',ajustes:'Ajustes'};let panelTab='filmes';
 function openPanel(v){app.classList.toggle('open',v);document.querySelectorAll('.rt').forEach(b=>b.setAttribute('aria-selected',v&&b.dataset.t===panelTab));setTimeout(fit,320);}
 function setTab(t){if(t==='amigos')loadFriends();panelTab=t;$('#ptitle').textContent=PT[t];document.querySelectorAll('.pb').forEach(p=>p.classList.toggle('on',p.id==='t-'+t));openPanel(true);}
 
@@ -332,7 +332,7 @@ document.addEventListener('click',async e=>{
   if(act==='close'){closeModal();return;}
   if(act==='closepanel'){openPanel(false);return;}
   if(act==='togglepanel'){openPanel(!app.classList.contains('open'));return;}
-  if(act==='gocfg'){setTab('ajustes');return;}
+  if(act==='gocfg'){setTab('conta');return;}
   if(act==='fr-open'){openFriend(el.dataset.uid);return;}
   if(act==='fr-back'){fr.view=null;fr.movies=null;renderFriends();return;}
   if(act==='fr-accept'){const {error}=await sb.from('friendships').update({status:'accepted'}).eq('id',el.dataset.fid);if(error)frMsg('Erro ao aceitar: '+error.message,'bad');await loadFriends();return;}
@@ -623,13 +623,43 @@ function renderAuth(){
   $('#who').textContent=user?user.email:'';
   const chip=$('#loginChip');chip.hidden=!sb;chip.textContent=user?'☁️ '+user.email.split('@')[0]:'☁️ Entrar para sincronizar';renderProfile();
 }
-async function authDo(kind){
-  const email=$('#email').value.trim(),password=$('#pass').value;
-  if(!email||password.length<6){setSync('Informe e-mail e senha (mínimo de 6 caracteres).');return;}
-  setSync('⏳ Aguarde…');
-  const {data,error}=await(kind==='up'?sb.auth.signUp({email,password}):sb.auth.signInWithPassword({email,password}));
-  if(error){setSync('❌ '+error.message);return;}
-  if(kind==='up'&&!data.session)setSync('📧 Conta criada! Confirme pelo e-mail que você recebeu e depois toque em Entrar.');
+let authMode='in',authBusy=false;
+function setAuthMode(m){
+  authMode=m;
+  document.querySelectorAll('#authSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===m));
+  $('#authGo').textContent=m==='up'?'Criar conta':'Entrar';
+  $('#pass').autocomplete=m==='up'?'new-password':'current-password';
+  $('#authLead').textContent=m==='up'?'Crie sua conta para guardar a lista na nuvem e adicionar amigos. Não precisa confirmar o e-mail.':'Entre para guardar sua lista na nuvem, acessá-la em qualquer aparelho e adicionar amigos.';
+  setSync('');
+}
+const authErr=e=>{
+  const m=(e&&e.message)||'',c=(e&&e.code)||'';
+  if(/invalid login/i.test(m))return 'E-mail ou senha incorretos.';
+  if(/already registered|user_already_exists/i.test(m+c))return 'Esse e-mail já tem conta. Use “Entrar”.';
+  if(/not confirmed|email_not_confirmed/i.test(m+c))return 'E-mail ainda não confirmado. Confirme pelo link que foi enviado.';
+  if(/rate limit|over_email_send_rate_limit|too many/i.test(m+c))return 'Muitas tentativas. Aguarde um pouco e tente de novo.';
+  if(/password/i.test(m)&&/(short|least|weak)/i.test(m))return 'A senha precisa ter pelo menos 6 caracteres.';
+  if(/valid email|email_address_invalid|invalid.*email/i.test(m+c))return 'Esse e-mail não parece válido.';
+  if(/signups? (not allowed|disabled)|signup_disabled/i.test(m+c))return 'Novos cadastros estão desativados.';
+  if(/fetch|network/i.test(m))return 'Sem conexão. Verifique a internet.';
+  return m||'Algo deu errado. Tente de novo.';
+};
+async function authDo(){
+  if(authBusy)return;
+  const email=$('#email').value.trim(),password=$('#pass').value,kind=authMode;
+  if(!/^\S+@\S+\.\S+$/.test(email)){setSync('❌ Informe um e-mail válido.');$('#email').focus();return;}
+  if(password.length<6){setSync('❌ A senha precisa ter pelo menos 6 caracteres.');$('#pass').focus();return;}
+  authBusy=true;$('#authGo').disabled=true;setSync('⏳ Aguarde…');
+  try{
+    const {data,error}=await(kind==='up'?sb.auth.signUp({email,password}):sb.auth.signInWithPassword({email,password}));
+    if(error){setSync('❌ '+authErr(error));return;}
+    if(kind==='up'){
+      if(data.user&&Array.isArray(data.user.identities)&&!data.user.identities.length){setSync('❌ Esse e-mail já tem conta. Use “Entrar”.');return;}
+      if(!data.session){setSync('📧 Conta criada! Confirme pelo e-mail que você recebeu e depois toque em Entrar.');setAuthMode('in');setSync('📧 Conta criada! Confirme pelo e-mail que você recebeu e depois toque em Entrar.');return;}
+    }
+    $('#pass').value='';setSync(kind==='up'?'✅ Conta criada! Você já está conectado.':'✅ Conectado.');
+  }catch(e){setSync('❌ '+authErr(e));}
+  finally{authBusy=false;$('#authGo').disabled=false;}
 }
 if(window.supabase&&/^https:\/\//.test(window.SUPABASE_URL||'')&&window.SUPABASE_KEY&&!/COLE/.test(window.SUPABASE_KEY)){
   sb=window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_KEY);
@@ -638,11 +668,12 @@ if(window.supabase&&/^https:\/\//.test(window.SUPABASE_URL||'')&&window.SUPABASE
     if(user&&(ev==='INITIAL_SESSION'||ev==='SIGNED_IN')&&pulledFor!==user.id){pulledFor=user.id;setTimeout(pullCloud,0);}
     if(!user){pulledFor=null;cloudIds=new Set();if(ev==='SIGNED_OUT'){setSync('Você saiu da conta.');prof={name:'',user:''};saveProf();renderProfile();fr={rows:[],prof:{},view:null,movies:null,missing:false,err:'',loaded:false};renderFriends();}}
   });
-  $('#inBtn').addEventListener('click',()=>authDo('in'));
-  $('#upBtn').addEventListener('click',()=>authDo('up'));
+  $('#authIn').addEventListener('submit',e=>{e.preventDefault();authDo();});
+  document.querySelectorAll('#authSeg button').forEach(b=>b.addEventListener('click',()=>setAuthMode(b.dataset.m)));
+  $('#pwShow').addEventListener('click',()=>{const p=$('#pass'),s=p.type==='password';p.type=s?'text':'password';$('#pwShow').textContent=s?'Ocultar':'Mostrar';$('#pwShow').setAttribute('aria-pressed',s);});
   $('#outBtn').addEventListener('click',()=>sb.auth.signOut());
 }
-$('#loginChip').addEventListener('click',()=>setTab(user?'perfil':'ajustes'));
+$('#loginChip').addEventListener('click',()=>setTab(user?'perfil':'conta'));
 
 /* ---------- Início ---------- */
 if(window.TMDB_DEFAULT_KEY)$('#keyDef').textContent='Já existe uma chave padrão do site; só preencha se quiser usar a sua.';$('#inc').checked=state.incWatched;$('#key').value=state.key||'';
