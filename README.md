@@ -13,7 +13,9 @@ Uma roleta para sortear o próximo filme da sua lista. Você monta a própria co
 - 🎯 A roleta sorteia só os filmes que você ainda não viu (opção para incluir os assistidos)
 - ☁️ Conta com e-mail e senha e sincronização entre aparelhos via [Supabase](https://supabase.com/) (opcional)
 - 💾 Dados também salvos no navegador (`localStorage`), com exportação e importação de backup em JSON
-- 🌗 Tema claro e escuro automáticos
+- 🎨 Temas selecionáveis (Cinema, Claro, Neon e Retrô) e cor de destaque personalizável
+- 🖼️ Lista em grade de capas, tela de detalhes, busca, filtros por status e gênero e ordenação
+- 🎉 Animação e confete ao sortear o filme
 
 ## 🚀 Como usar
 
@@ -27,7 +29,7 @@ A chave **não** fica no código: ela é digitada por você e guardada só no se
 ## 💻 Rodar localmente
 
 ```bash
-git clone https://github.com/SEU-USUARIO/roleta-cinema.git
+git clone https://github.com/JoaoCardoso18/roleta-cinema.git
 cd roleta-cinema
 python3 -m http.server 8000   # ou abra o index.html direto no navegador
 ```
@@ -37,7 +39,7 @@ Depois acesse http://localhost:8000.
 ## 🌐 Publicar com GitHub Pages
 
 *Settings → Pages → Source: Deploy from a branch → Branch: `main` / `(root)` → Save.*
-O site fica em `https://SEU-USUARIO.github.io/roleta-cinema/`.
+O site fica em `https://joaocardoso18.github.io/roleta-cinema/`.
 
 ## 🗂️ Estrutura
 
