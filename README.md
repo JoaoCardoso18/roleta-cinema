@@ -92,7 +92,7 @@ O projeto é estático e pode ser publicado com o GitHub Pages: *Settings → Pa
 - [x] Sincronização entre aparelhos
 - [x] Perfil e amigos
 - [ ] Listas por categoria
-- [ ] Comparação de listas e sorteio de filme em comum entre amigos
+- [x] Comparação de listas e sorteio de filme em comum entre amigos
 - [ ] Troca do filme associado quando o TMDB retorna o título errado
 - [ ] PWA (instalação no celular e uso offline)
 

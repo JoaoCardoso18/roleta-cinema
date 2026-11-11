@@ -248,6 +248,15 @@ label.check,label.cl{display:flex;align-items:center;gap:8px;cursor:pointer;font
 .profile h3{font-size:1.25rem}
 .profile p{margin:0;color:var(--muted);font-size:.85rem;overflow-wrap:anywhere}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+/* interruptor (liga/desliga) */
+.swrow{display:flex;gap:12px;align-items:flex-start}
+.swrow b{display:block;font-size:.9rem;font-weight:600}
+.swrow .stats{margin-top:2px}
+.sw{flex:none;width:42px;height:24px;border-radius:999px;border:0;background:var(--line);position:relative;cursor:pointer;margin-top:1px;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .2s}
+.sw[aria-checked="true"]{background:#4fb477}
+.sw[aria-checked="true"]::after{left:21px}
+.sw:disabled{opacity:.5;cursor:default}
 .kpi{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center}
 .kpi b{display:block;font:700 1.4rem var(--head);font-variant-numeric:tabular-nums}
 .kpi span{font-size:.72rem;color:var(--muted)}
@@ -443,3 +452,20 @@ button.frow:hover{background:var(--surface2)}
 @keyframes pop{0%{transform:scale(.82);opacity:0}100%{transform:scale(1);opacity:1}}
 .confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* ================= Comparar listas com amigos ================= */
+.ctabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:3px}
+.ctabs button{flex:1;min-width:0;font:600 .74rem/1.2 var(--head);border:0;background:none;color:var(--muted);padding:7px 4px;border-radius:9px;cursor:pointer}
+.ctabs button i{font-style:normal;display:block;font-size:1rem;font-weight:800;color:var(--gold)}
+.ctabs button[aria-selected="true"]{background:var(--surface2);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line)}
+.cmp .fmv{max-height:260px;overflow:auto}
+.cmp .btn.pri{display:flex;align-items:center;justify-content:center;gap:8px}
+.cmp .btn .hi{margin:0}
+/* selo "Com fulano" no cabeçalho durante o sorteio a dois */
+.with{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:var(--accent-fg);border-radius:999px;padding:3px 3px 3px 3px;font-size:.78rem;font-weight:700;white-space:nowrap;max-width:220px}
+.with[hidden]{display:none}
+.with #duoName{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.wav{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:.68rem;color:#fff;border:1.5px solid var(--accent-fg);flex:none}
+.wx{width:20px;height:20px;border-radius:50%;border:0;display:grid;place-items:center;background:rgba(255,255,255,.22);color:inherit;cursor:pointer;padding:0;flex:none}
+.wx:hover{background:rgba(255,255,255,.38)}
+.wx svg{width:12px;height:12px;stroke-width:2.6}

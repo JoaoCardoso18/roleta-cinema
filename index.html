@@ -21,6 +21,7 @@
     <header class="top">
       <div class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="6.5" r="1.6"/><circle cx="12" cy="17.5" r="1.6"/><circle cx="6.5" cy="12" r="1.6"/><circle cx="17.5" cy="12" r="1.6"/></svg>Roleta Cinema</div>
       <div class="fbar" id="fbar">
+        <span class="with" id="duoChip" hidden title="Roleta só com os filmes que vocês dois querem ver"><span class="wav" id="duoAv"></span><span id="duoName"></span><button class="wx" data-act="duo-end" aria-label="Voltar para a roleta normal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>
         <select id="fg" aria-label="Filtrar a roleta por gênero" hidden></select>
         <label class="check"><input type="checkbox" id="inc"> Incluir já assistidos</label>
         <button class="btn" id="fclr" hidden>Limpar filtros</button>
@@ -107,6 +108,11 @@
           <label class="lab">Seu código de amigo</label>
           <div class="code"><code id="mycode">RC-····-····</code><button class="btn" data-act="copycode">Copiar</button></div>
           <p class="stats">Passe esse código, ou o seu @, para um amigo te adicionar. Defina seu @ no lápis acima.</p>
+        </div>
+        <div class="box" id="pfPriv" hidden>
+          <label class="lab">Privacidade</label>
+          <div class="swrow"><button class="sw" id="shareSw" role="switch" aria-checked="true" aria-labelledby="shareLb"></button>
+            <div><b id="shareLb">Mostrar meus filmes “Quero ver” para amigos</b><p class="stats" id="shareTxt"></p></div></div>
         </div>
         <div class="box">
           <label class="lab">Último sorteado</label>

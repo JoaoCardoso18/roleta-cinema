@@ -1,5 +1,5 @@
 /* Versão do site: atualizar a cada commit, junto com a tag (ver CLAUDE.md) */
-const VERSION='v0.0.42';
+const VERSION='v0.0.43';
 const FONT="Manrope,system-ui,sans-serif",KEY='roleta-cinema-v2', UIKEY='roleta-ui-v1', TAU=Math.PI*2, IMG='https://image.tmdb.org/t/p/';
 const $=s=>document.querySelector(s);
 const uid=()=>crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);});
@@ -20,7 +20,7 @@ function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(
 function save(){saveLocal();schedulePush();}
 state=load();
 let rg='';
-const pool=()=>state.movies.filter(m=>(state.incWatched||!m.watched)&&(!rg||(m.tmdb&&(m.tmdb.genres||[]).includes(rg))));
+const pool=()=>state.movies.filter(m=>(state.incWatched||!m.watched)&&(!rg||(m.tmdb&&(m.tmdb.genres||[]).includes(rg)))&&(!duo||(!m.watched&&m.tmdb&&duo.ids.has(m.tmdb.id))));
 const byId=id=>state.movies.find(m=>m.id===id);
 
 /* ---------- Aparência (temas) ---------- */
@@ -282,7 +282,7 @@ function renderResult(anim){
     ${t&&t.backdrop?`<div class="rban" style="background-image:url('${IMG}w780${t.backdrop}')"></div>`:''}
     ${t&&t.poster?`<img class="rposter" src="${IMG}w154${t.poster}" alt="Pôster de ${esc(m.title)}">`:''}
     <div class="rbody">
-      <small class="kick">${frBlock?'Franquia '+esc(cleanCol(t.col.name))+' sorteada. Comece por…':'Hoje a sessão é…'}</small>
+      <small class="kick">${frBlock?'Franquia '+esc(cleanCol(t.col.name))+' sorteada. Comece por…':(duo?'Sessão com '+esc(duo.name):'Hoje a sessão é…')}</small>
       <h2>${esc(m.title)}</h2>
       ${t?`<div class="info">${esc(infoLine(t))}</div>`:''}
     </div>
@@ -293,7 +293,7 @@ function renderResult(anim){
     </div></div>`;
   fit();
 }
-const renderPoolInfo=()=>{const n=pool().length;$('#poolInfo').textContent=`${n} filme${n===1?'':'s'} na roleta`;};
+const renderPoolInfo=()=>{const n=pool().length;$('#poolInfo').textContent=duo?`${n} filme${n===1?'':'s'} em comum`:`${n} filme${n===1?'':'s'} na roleta`;renderDuo();};
 function renderFbar(){
   const set=new Set();state.movies.forEach(m=>m.tmdb&&(m.tmdb.genres||[]).forEach(g=>set.add(g)));
   const gs=[...set].sort((x,y)=>x.localeCompare(y,'pt'));if(rg&&!set.has(rg))rg='';
@@ -381,6 +381,7 @@ function renderProfile(){
   $('#pfUser').textContent=un?'@'+un:(user?'Defina seu usuário':'Entre na conta para sincronizar');
   $('#mycode').textContent=friendCode();
   $('#pfSync').textContent=user?'Conectado como '+user.email:'Sem conta conectada.';
+  renderShare();
 }
 function renderIdleHint(){if(lastId||spinning)return;$('#res').innerHTML=state.movies.length?idle('Seu filme será…','?'):idle('Sua lista está vazia','Adicione seu primeiro filme');fit();}
 function renderFrOffer(){
@@ -471,12 +472,15 @@ document.addEventListener('click',async e=>{
   if(act==='togglepanel'){openPanel(!app.classList.contains('open'));return;}
   if(act==='gocfg'){setTab('conta');return;}
   if(act==='fr-open'){openFriend(el.dataset.uid);return;}
+  if(act==='fr-tab'){fr.cmpTab=el.dataset.t;renderFriends();return;}
+  if(act==='duo'){startDuo();return;}
+  if(act==='duo-end'){endDuo();return;}
   if(act==='fr-back'){fr.view=null;fr.movies=null;renderFriends();return;}
   if(act==='fr-accept'){const {error}=await sb.from('friendships').update({status:'accepted'}).eq('id',el.dataset.fid);if(error)frMsg('Erro ao aceitar: '+error.message,'bad');await loadFriends();return;}
   if(act==='fr-remove'){
     if(el.dataset.armed||!el.dataset.back){
       const {error}=await sb.from('friendships').delete().eq('id',el.dataset.fid);
-      if(error)frMsg('Erro: '+error.message,'bad');else if(el.dataset.back){fr.view=null;fr.movies=null;}
+      if(error)frMsg('Erro: '+error.message,'bad');else if(el.dataset.back){if(duo&&duo.uid===fr.view)endDuo();fr.view=null;fr.movies=null;}
       await loadFriends();
     }else{
       const old=el.textContent;el.dataset.armed=1;el.textContent='Toque de novo para confirmar';
@@ -613,9 +617,22 @@ $('#impRep').addEventListener('click',e=>{
 
 /* ---------- Perfil (nome e usuário; a foto é a inicial do nome) ---------- */
 const PROFKEY='roleta-profile-v1';
-let prof={name:'',user:''};
-try{const s=JSON.parse(localStorage.getItem(PROFKEY)||'null');if(s)prof={name:String(s.name||''),user:String(s.user||'')};}catch(e){}
+let prof={name:'',user:'',share:true};
+try{const s=JSON.parse(localStorage.getItem(PROFKEY)||'null');if(s)prof={name:String(s.name||''),user:String(s.user||''),share:s.share!==false};}catch(e){}
 const saveProf=()=>{try{localStorage.setItem(PROFKEY,JSON.stringify(prof));}catch(e){}};
+var shareMissing=false; /* var: renderProfile pode rodar antes desta linha */
+/* Privacidade: amigos podem ver a fila "Quero ver" (para comparar listas) */
+function renderShare(){
+  const box=$('#pfPriv');box.hidden=!(sb&&user);if(box.hidden)return;
+  const sw=$('#shareSw');sw.setAttribute('aria-checked',prof.share);sw.disabled=shareMissing;
+  $('#shareTxt').textContent=shareMissing?'Para usar, rode o bloco “Comparar listas com amigos” do schema.sql no Supabase.':prof.share?'Seus amigos podem comparar listas e sortear um filme com você.':'Seus amigos veem só os filmes que você já assistiu e as notas.';
+}
+$('#shareSw').addEventListener('click',async()=>{
+  if(!(sb&&user)||shareMissing)return;
+  const v=!prof.share;prof.share=v;saveProf();renderShare();
+  const {error}=await sb.from('profiles').update({share_wishlist:v}).eq('user_id',user.id);
+  if(error){prof.share=!v;saveProf();if(/42703|share_wishlist/.test((error.code||'')+' '+(error.message||'')))shareMissing=true;renderShare();if(!shareMissing)$('#shareTxt').textContent='Não foi possível salvar: '+error.message;}
+});
 const cleanUser=s=>String(s||'').toLowerCase().replace(/[^a-z0-9._]/g,'').replace(/^\.+|\.+$/g,'').slice(0,20);
 const emailBase=()=>user?user.email.split('@')[0]:'';
 const pName=()=>prof.name||emailBase()||'Visitante';
@@ -663,20 +680,23 @@ $('#pform').addEventListener('submit',async e=>{
       else{setHint('Erro ao salvar: '+error.message,'bad');updSave();return;}
     }
   }
-  prof={name,user:uname};saveProf();pfBusy=false;renderProfile();openEdit(false);
+  prof={...prof,name,user:uname};saveProf();pfBusy=false;renderProfile();openEdit(false);
   $('#pfMsg').textContent='Perfil atualizado'+note+'.';
 });
 async function pullProfile(){
-  try{const {data,error}=await sb.from('profiles').select('username,name').eq('user_id',user.id).maybeSingle();
+  try{let {data,error}=await sb.from('profiles').select('username,name,share_wishlist').eq('user_id',user.id).maybeSingle();
+    /* banco sem a coluna de privacidade ainda (bloco "Comparar listas" do schema.sql não rodado) */
+    if(error&&/42703|share_wishlist/.test((error.code||'')+' '+(error.message||''))){shareMissing=true;({data,error}=await sb.from('profiles').select('username,name').eq('user_id',user.id).maybeSingle());}
+    else if(!error)shareMissing=false;
     if(error)return;
-    if(data){prof={name:data.name||'',user:data.username||''};saveProf();renderProfile();return;}
+    if(data){prof={name:data.name||'',user:data.username||'',share:data.share_wishlist!==false};saveProf();renderProfile();return;}
     // sem perfil na nuvem ainda: cria um com o nome/@ atuais (ou o padrão do e-mail), para os amigos conseguirem te achar
     let base=(cleanUser(pUser())||'').slice(0,16);if(base.length<3)base=(base+'user').slice(0,16);
     const name=(pName()||base).slice(0,30);
     for(let i=0;i<4;i++){
       const uname=i?base+Math.floor(Math.random()*900+100):base;
       const {error:e2}=await sb.from('profiles').upsert({user_id:user.id,username:uname,name});
-      if(!e2){prof={name,user:uname};saveProf();renderProfile();return;}
+      if(!e2){prof={...prof,name,user:uname};saveProf();renderProfile();return;}
       if(e2.code!=='23505')return;
     }
   }catch(e){}
@@ -716,13 +736,43 @@ function renderFriends(){
   if(out.length)h+=`<div class="fsec"><div class="lab">Convites enviados (${out.length})</div>${out.map(r=>{const p=frP(frPeer(r));return `<div class="frow">${fAvatar(p)}<div class="ft"><b>${nm(p)}</b><span class="sub">Aguardando resposta</span></div><button class="btn" data-act="fr-remove" data-fid="${r.id}">Cancelar</button></div>`;}).join('')}</div>`;
   box.innerHTML=h;
 }
+/* Comparação de listas: cruza pelo ID do TMDB (filmes "sem dados" ficam de fora) */
+const mvRow=(m,stars)=>{const t=m.tmdb;return `<div class="row-m"><div class="cv">${t&&t.poster?`<img src="${IMG}w154${t.poster}" alt="">`:`<div class="ph" style="--c:${esc(m.color)}"></div>`}</div><div class="tt"><b>${esc(m.title)}</b><span class="sub">${t&&t.year?esc(t.year):''}${stars||''}</span></div></div>`;};
+function compareLists(){
+  const tid=m=>m.tmdb&&m.tmdb.id,mine=new Map(),mineW=new Map();
+  state.movies.forEach(m=>{const i=tid(m);if(i)(m.watched?mineW:mine).set(i,m);});
+  const wish=fr.wish||[],seen=fr.movies||[];
+  return {
+    both:wish.filter(m=>mine.has(tid(m))).map(m=>mine.get(tid(m))),
+    he:seen.filter(m=>mine.has(tid(m))),
+    me:wish.filter(m=>mineW.has(tid(m))).map(m=>({...m,rating:mineW.get(tid(m)).rating}))
+  };
+}
+function compareBox(p){
+  const nm=esc(p.name||p.username);
+  if(fr.wishMissing)return `<div class="box"><label class="lab">Comparar listas</label><p class="stats">Para comparar listas, rode o bloco “Comparar listas com amigos” do schema.sql no Supabase e recarregue a página.</p></div>`;
+  if(fr.wish===null)return `<div class="box"><label class="lab">Comparar listas</label><div class="stats">Carregando…</div></div>`;
+  const c=compareLists(),hidden=fr.wishHidden,tabs=hidden?['he']:['both','he','me'];
+  if(!tabs.includes(fr.cmpTab))fr.cmpTab=tabs[0];
+  const L={both:'Os dois querem ver',he:`${nm} viu, você quer`,me:`Você viu, ${nm} quer`};
+  const E={both:'Nenhum filme em comum na fila “Quero ver” ainda.',he:`Nenhum filme que ${nm} já viu está na sua fila.`,me:`Nenhum filme da fila de ${nm} você já assistiu.`};
+  const list=c[fr.cmpTab],st=fr.cmpTab==='both'?()=>'':m=>starsStatic(m.rating);
+  return `<div class="box cmp"><label class="lab">Comparar listas</label>
+    ${hidden?`<p class="stats">${nm} deixou a fila “Quero ver” privada. Aparecem só os filmes que já foram assistidos e estão na sua fila.</p>`:''}
+    <div class="ctabs" role="tablist">${tabs.map(k=>`<button role="tab" aria-selected="${k===fr.cmpTab}" data-act="fr-tab" data-t="${k}"><i>${c[k].length}</i>${L[k]}</button>`).join('')}</div>
+    ${list.length?`<div class="fmv">${list.map(m=>mvRow(m,st(m))).join('')}</div>`:`<div class="stats">${E[fr.cmpTab]}</div>`}
+    ${hidden?'':`<button class="btn pri" data-act="duo" ${c.both.length?'':'disabled'}>${IC.film}Sortear um filme para ver juntos</button>`}
+  </div>`;
+}
 function renderFriendView(box){
   const u=fr.view,p=frP(u),r=fr.rows.find(x=>frPeer(x)===u),mv=fr.movies;
   let body='<div class="stats">Carregando…</div>';
   if(mv){
     const rs=mv.filter(m=>m.rating>0),avg=rs.length?(rs.reduce((s,m)=>s+m.rating,0)/rs.length).toFixed(1):'–';
-    body=`<div class="grid3"><div class="kpi"><b>${mv.length}</b><span>assistidos</span></div><div class="kpi"><b>${rs.length}</b><span>com nota</span></div><div class="kpi"><b>${avg}</b><span>nota média</span></div></div>
-    <div class="box"><label class="lab">Filmes assistidos</label>${mv.length?`<div class="fmv">${mv.map(m=>{const t=m.tmdb;return `<div class="row-m"><div class="cv">${t&&t.poster?`<img src="${IMG}w154${t.poster}" alt="">`:`<div class="ph" style="--c:${esc(m.color)}"></div>`}</div><div class="tt"><b>${esc(m.title)}</b><span class="sub">${t&&t.year?esc(t.year):''}${starsStatic(m.rating)}</span></div></div>`;}).join('')}</div>`:'<div class="stats">Ainda não assistiu nenhum filme.</div>'}</div>`;
+    const k2=fr.wish&&!fr.wishHidden?`<b>${fr.wish.length}</b><span>quer ver</span>`:`<b>${rs.length}</b><span>com nota</span>`;
+    body=`<div class="grid3"><div class="kpi"><b>${mv.length}</b><span>assistidos</span></div><div class="kpi">${k2}</div><div class="kpi"><b>${avg}</b><span>nota média</span></div></div>
+    ${compareBox(p)}
+    <div class="box"><label class="lab">Filmes assistidos</label>${mv.length?`<div class="fmv">${mv.map(m=>mvRow(m,starsStatic(m.rating))).join('')}</div>`:'<div class="stats">Ainda não assistiu nenhum filme.</div>'}</div>`;
   }
   const ini=esc((p.name||p.username||'?').trim().charAt(0).toUpperCase());
   box.innerHTML=`<button class="back" data-act="fr-back">‹ Voltar</button>
@@ -730,12 +780,34 @@ function renderFriendView(box){
     ${r?`<div class="box"><label class="lab">Amizade</label><div class="stats">Vocês veem os filmes assistidos e as notas um do outro.</div><button class="btn danger" data-act="fr-remove" data-fid="${r.id}" data-back="1">Remover amigo</button></div>`:''}`;
 }
 async function openFriend(uid){
-  fr.view=uid;fr.movies=null;renderFriends();
-  const {data,error}=await sb.rpc('friend_movies',{friend:uid});
+  fr.view=uid;fr.movies=null;fr.wish=null;fr.wishMissing=false;fr.wishHidden=false;fr.cmpTab='both';renderFriends();
+  const [a,b,c]=await Promise.all([
+    sb.rpc('friend_movies',{friend:uid}),
+    sb.rpc('friend_wishlist',{friend:uid}),
+    sb.from('profiles').select('share_wishlist').eq('user_id',uid).maybeSingle()
+  ]);
   if(fr.view!==uid)return;
-  fr.movies=error?[]:(data||[]);
-  if(error)fr.err='';
+  fr.movies=a.error?[]:(a.data||[]);
+  if(b.error){fr.wishMissing=MISSING.test((b.error.code||'')+' '+(b.error.message||''));fr.wish=[];}
+  else fr.wish=b.data||[];
+  fr.wishHidden=!fr.wishMissing&&!!(c.data&&c.data.share_wishlist===false);
   renderFriends();
+}
+
+/* Sorteio a dois: a roleta fica só com os filmes que você e o amigo querem ver */
+var duo=null; /* var: pool() pode rodar antes desta linha */
+function startDuo(){
+  const p=frP(fr.view),both=compareLists().both;if(!both.length)return;
+  duo={uid:fr.view,name:p.name||p.username||'amigo',hue:hue(p.username||p.name),ids:new Set(both.map(m=>m.tmdb.id))};
+  lastId=null;lastFr=null;setBackdrop(null);
+  if(!wide())openPanel(false);
+  refreshUI();setTimeout(go,350);
+}
+function endDuo(){if(!duo)return;duo=null;if(lastId){lastId=null;lastFr=null;setBackdrop(null);}refreshUI();}
+function renderDuo(){
+  const c=$('#duoChip');c.hidden=!duo;if(!duo)return;
+  $('#duoAv').textContent=(duo.name.trim().charAt(0)||'?').toUpperCase();$('#duoAv').style.background=`hsl(${duo.hue} 45% 36%)`;
+  $('#duoName').textContent='Com '+duo.name;
 }
 function frMsg(t,c){const h=$('#frMsg');h.textContent=t;h.className='hint'+(c?' '+c:'');}
 async function sendInvite(q){
@@ -838,7 +910,7 @@ if(window.supabase&&/^https:\/\//.test(window.SUPABASE_URL||'')&&window.SUPABASE
     if(ev==='PASSWORD_RECOVERY'){recovery=true;setTab('conta');setSync('Defina sua nova senha abaixo.');}
     user=session?session.user:null;renderAuth();
     if(user&&(ev==='INITIAL_SESSION'||ev==='SIGNED_IN')&&pulledFor!==user.id){pulledFor=user.id;setTimeout(pullCloud,0);}
-    if(!user){pulledFor=null;cloudIds=new Set();if(ev==='SIGNED_OUT'){setSync('Você saiu da conta.');prof={name:'',user:''};saveProf();renderProfile();fr={rows:[],prof:{},view:null,movies:null,missing:false,err:'',loaded:false};renderFriends();}}
+    if(!user){pulledFor=null;cloudIds=new Set();if(ev==='SIGNED_OUT'){setSync('Você saiu da conta.');prof={name:'',user:''};saveProf();renderProfile();fr={rows:[],prof:{},view:null,movies:null,missing:false,err:'',loaded:false};renderFriends();endDuo();}}
   });
   $('#authIn').addEventListener('submit',e=>{e.preventDefault();authDo();});
   $('#forgot').addEventListener('click',async()=>{

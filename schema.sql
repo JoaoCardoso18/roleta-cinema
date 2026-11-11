@@ -56,8 +56,9 @@ create policy "Editar o próprio perfil" on public.profiles
   using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 -- ---------------------------------------------------------------
--- Amigos: convites com aceite. O amigo enxerga apenas os filmes ASSISTIDOS
--- (título, capa e nota). Anotações e a fila "Quero ver" continuam privadas.
+-- Amigos: convites com aceite. O amigo enxerga os filmes ASSISTIDOS (título,
+-- capa e nota). A fila "Quero ver" só aparece pelo bloco "Comparar listas",
+-- se a pessoa deixar visível no Perfil. Anotações continuam privadas.
 -- ---------------------------------------------------------------
 create table if not exists public.friendships (
   id uuid primary key default gen_random_uuid(),
@@ -122,3 +123,31 @@ revoke all on function public.find_profile(text) from public, anon;
 revoke all on function public.friend_movies(uuid) from public, anon;
 grant execute on function public.find_profile(text) to authenticated;
 grant execute on function public.friend_movies(uuid) to authenticated;
+
+-- ---------------------------------------------------------------
+-- Comparar listas com amigos. Rode este bloco uma vez no Supabase
+-- (SQL Editor). Cada pessoa escolhe no Perfil se os amigos podem ver
+-- a fila "Quero ver"; o padrão é mostrar.
+-- ---------------------------------------------------------------
+alter table public.profiles
+  add column if not exists share_wishlist boolean not null default true;
+
+-- Filmes "Quero ver" de um amigo, só se ele deixou visível (sem anotações)
+create or replace function public.friend_wishlist(friend uuid)
+returns table(id uuid, title text, color text, tmdb jsonb, pos int)
+language sql security definer set search_path = public as $$
+  select m.id, m.title, m.color, m.tmdb, m.pos
+  from public.movies m
+  where m.user_id = friend and not m.watched
+    and coalesce((select p.share_wishlist from public.profiles p where p.user_id = friend), true)
+    and exists (
+      select 1 from public.friendships f
+      where f.status = 'accepted'
+        and ((f.requester = auth.uid() and f.addressee = friend)
+          or (f.addressee = auth.uid() and f.requester = friend))
+    )
+  order by m.pos;
+$$;
+
+revoke all on function public.friend_wishlist(uuid) from public, anon;
+grant execute on function public.friend_wishlist(uuid) to authenticated;
