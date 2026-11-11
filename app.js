@@ -1,3 +1,5 @@
+/* Versão do site: atualizar a cada commit, junto com a tag (ver CLAUDE.md) */
+const VERSION='v0.0.40';
 const FONT="Manrope,system-ui,sans-serif",KEY='roleta-cinema-v2', UIKEY='roleta-ui-v1', TAU=Math.PI*2, IMG='https://image.tmdb.org/t/p/';
 const $=s=>document.querySelector(s);
 const uid=()=>crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);});
@@ -868,5 +870,6 @@ $('#loginChip').addEventListener('click',()=>setTab(user?'perfil':'conta'));
 /* ---------- Início ---------- */
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{try{draw();}catch(e){}});
 if(window.TMDB_DEFAULT_KEY)$('#keyDef').textContent='Já existe uma chave padrão do site; só preencha se quiser usar a sua.';$('#inc').checked=state.incWatched;$('#frOn').checked=ui.fr!==false;$('#key').value=state.key||'';
+document.querySelectorAll('[data-ver]').forEach(e=>e.textContent=VERSION);
 renderCgrid();applyUI();setMode(ui.mode);renderFbar();lock(false);renderPoolInfo();renderList();renderAuth();renderProfile();renderFriends();renderIdleHint();
 if(!state.movies.length){setTab('filmes');$('#addbox').open=true;}

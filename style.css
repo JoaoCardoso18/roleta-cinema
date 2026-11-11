@@ -187,6 +187,11 @@ label.check,label.cl{display:flex;align-items:center;gap:8px;cursor:pointer;font
 .rail.ext .lb{opacity:1;transition-delay:.08s}
 .rail .expand{width:100%;height:46px;border-radius:12px;display:flex;align-items:center;gap:14px;padding:0 13px;justify-content:flex-start}
 .rail .sp{flex:1}
+.ver{flex:none;margin-top:2px;padding:2px 0;font-size:.66rem;color:var(--muted);text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums;opacity:.75}
+.rail.ext .ver{text-align:left;padding-left:13px}
+.ver::before{content:"Versão ";display:none}
+.rail.ext .ver::before{display:inline}
+.ver-m{display:none;text-align:center;font-size:.72rem;color:var(--muted);padding:4px 0 8px}
 .rt{width:100%;height:46px;border-radius:12px;border:0;background:none;color:var(--muted);display:flex;align-items:center;gap:14px;padding:0 13px;position:relative;cursor:pointer;font-family:inherit}
 .rt:hover{background:var(--surface2);color:var(--fg)}
 .app.open .rt[aria-selected="true"]{background:var(--surface2);color:var(--fg)}
@@ -381,7 +386,9 @@ button.frow:hover{background:var(--surface2)}
   .rail{order:3;width:100%;height:calc(64px + env(safe-area-inset-bottom));border-left:0;border-top:1px solid var(--line);z-index:21}
   .app.open .rail{border-left-color:transparent}
   .rail-in,.rail.ext .rail-in{position:static;width:100%;height:100%;flex-direction:row;justify-content:space-around;align-items:center;padding:6px 8px calc(6px + env(safe-area-inset-bottom));box-shadow:none;border-left:0}
-  .rail .sp,.rail .expand,.rail .lb{display:none}
+  .rail .sp,.rail .expand,.rail .lb,.rail .ver{display:none}
+  .ver-m{display:block}
+  .ver-m::before{content:"Roleta Cinema "}
   .rt{width:48px;height:48px;padding:0;justify-content:center}
   .side-panel{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));width:100%!important;height:0;transition:height .28s ease;border-left:0;border-top:1px solid var(--line);border-radius:18px 18px 0 0;z-index:20}
   .app.open .side-panel{height:62%}

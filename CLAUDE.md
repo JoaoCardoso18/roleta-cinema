@@ -9,6 +9,7 @@ Publicado no GitHub Pages: https://joaocardoso18.github.io/roleta-cinema/ (repo 
 - **Depois de cada commit, listar as features/alterações commitadas.** Não avisar que o GitHub Pages demora.
 - **Protótipo primeiro:** mudanças visuais grandes são validadas em protótipo (artifact/HTML) antes de entrar no site.
 - **Versões:** cada commit vira uma tag `v0.0.N`, uma por commit, na ordem do `git log --reverse` (v0.0.1 = primeiro commit). Para saber a próxima, ver a última com `git tag --sort=v:refname | tail -1` e somar 1. Enviar commit e tag juntos com `git push origin main --tags`.
+- **Versão no site:** a constante `VERSION` no topo do `app.js` mostra a versão abaixo de Ajustes na barra lateral (no celular, no fim da aba Ajustes). Em todo commit, atualizar `VERSION` para a tag que esse commit vai receber, antes de commitar.
 - Sem emojis na interface: usar ícones SVG (objeto `IC`, classe `.hi`). README profissional, sem exageros.
 - Fonte do site: **Manrope** (inclusive no canvas da roleta, constante `FONT` em `app.js`).
 - LICENSE MIT em nome de "João Vítor".
