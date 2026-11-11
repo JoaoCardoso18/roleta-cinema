@@ -334,12 +334,12 @@ function franchiseTab(m){
   if(!c)return '<p class="stats">Este filme não faz parte de uma franquia no TMDB'+(m.tmdb?'.':', ou ainda não tem dados. Use Ajustes → Buscar dados de todos.')+'</p>';
   const mem=state.movies.filter(x=>x.tmdb&&x.tmdb.col&&String(x.tmdb.col.id)===String(c.id)).sort((p,q)=>ordOf(p)-ordOf(q));
   const cached=colCache[c.id],inList=new Set(mem.map(x=>x.tmdb.id));
-  const rows=[...mem.map(x=>({n:x.tmdb.col.n,t:x.title,y:x.tmdb.year,st:x.watched?'Assistido':'Quero ver',cls:x.watched?'done':'',me:x.id===m.id,tm:x.tmdb.id}))];
+  const rows=[...mem.map(x=>({n:x.tmdb.col.n,t:x.title,y:x.tmdb.year,st:x.watched?'Assistido':'Quero ver',cls:x.watched?'done':'',me:x.id===m.id,tm:x.tmdb.id,mid:x.id,w:x.watched}))];
   if(cached)cached.parts.forEach((p,i)=>{if(!inList.has(p.id))rows.push({n:i+1,t:p.title,y:(p.release_date||'').slice(0,4),st:'Fora da lista',cls:'out',me:false,tm:p.id});});
   rows.sort((p,q)=>(p.n||99)-(q.n||99));
   const done=mem.filter(x=>x.watched).length,total=Math.max(c.total||0,rows.length);
   return `<div class="frnote"><div class="frh"><b>Franquia ${esc(cleanCol(c.name))}</b><span>${total} filmes · ${mem.length} na sua lista · ${done} assistidos</span></div>
-    <ul class="fro tall">${rows.map(r=>`<li class="${r.cls}${r.me?' me':''}"><span class="n">${r.n||''}</span><span class="tt">${esc(r.t)}${r.y?' <i>('+esc(r.y)+')</i>':''}</span><span class="st">${r.me?'Este filme':r.st}</span></li>`).join('')}</ul>
+    <ul class="fro tall">${rows.map(r=>`<li class="${r.cls}${r.me?' me':''}"><span class="n">${r.n||''}</span><span class="tt">${esc(r.t)}${r.y?' <i>('+esc(r.y)+')</i>':''}</span>${r.me?'<span class="st">Este filme</span>':''}${r.mid?`<button class="frw${r.w?' ok':''}" data-act="watch" data-id="${r.mid}" aria-pressed="${r.w}" title="${r.w?'Marcar como “Quero ver”':'Marcar como assistido'}">${r.w?IC.check:''}${r.st}</button>`:`<span class="st">${r.st}</span>`}</li>`).join('')}</ul>
     ${cached?'':'<div class="stats">Carregando os demais filmes da franquia…</div>'}</div>`;
 }
 function renderModal(){

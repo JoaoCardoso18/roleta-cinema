@@ -326,6 +326,10 @@ label.check,label.cl{display:flex;align-items:center;gap:8px;cursor:pointer;font
 .fro .tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fro .st{font-size:.72rem;font-weight:600;color:var(--muted)}
 .fro li.done .tt{text-decoration:line-through;color:var(--muted)}
+.frw{flex:none;display:inline-flex;align-items:center;gap:4px;font:600 .72rem var(--head);color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:999px;padding:2px 9px;cursor:pointer;white-space:nowrap}
+.frw:hover{color:var(--fg);border-color:color-mix(in srgb,var(--fg) 35%,var(--line))}
+.frw.ok{color:#4fb477;border-color:color-mix(in srgb,#4fb477 55%,var(--line))}
+.frw .hi{width:11px;height:11px;stroke-width:2.6}
 .fro li.next{outline:1px solid var(--gold);background:color-mix(in srgb,var(--gold) 12%,transparent)}
 .fro li.next .st{color:var(--gold)}
 #frOffer{display:flex;flex-direction:column;gap:8px}
