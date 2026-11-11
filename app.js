@@ -651,11 +651,12 @@ function renderFriendView(box){
   if(mv){
     const rs=mv.filter(m=>m.rating>0),avg=rs.length?(rs.reduce((s,m)=>s+m.rating,0)/rs.length).toFixed(1):'–';
     body=`<div class="grid3"><div class="kpi"><b>${mv.length}</b><span>assistidos</span></div><div class="kpi"><b>${rs.length}</b><span>com nota</span></div><div class="kpi"><b>${avg}</b><span>nota média</span></div></div>
-    <div class="fsec"><div class="lab">Filmes assistidos</div>${mv.length?mv.map(m=>{const t=m.tmdb;return `<div class="row-m"><div class="cv">${t&&t.poster?`<img src="${IMG}w154${t.poster}" alt="">`:`<div class="ph" style="--c:${esc(m.color)}"></div>`}</div><div class="tt"><b>${esc(m.title)}</b><span class="sub">${t&&t.year?esc(t.year):''}${starsStatic(m.rating)}</span></div></div>`;}).join(''):'<div class="stats">Ainda não assistiu nenhum filme.</div>'}</div>`;
+    <div class="box"><label class="lab">Filmes assistidos</label>${mv.length?`<div class="fmv">${mv.map(m=>{const t=m.tmdb;return `<div class="row-m"><div class="cv">${t&&t.poster?`<img src="${IMG}w154${t.poster}" alt="">`:`<div class="ph" style="--c:${esc(m.color)}"></div>`}</div><div class="tt"><b>${esc(m.title)}</b><span class="sub">${t&&t.year?esc(t.year):''}${starsStatic(m.rating)}</span></div></div>`;}).join('')}</div>`:'<div class="stats">Ainda não assistiu nenhum filme.</div>'}</div>`;
   }
+  const ini=esc((p.name||p.username||'?').trim().charAt(0).toUpperCase());
   box.innerHTML=`<button class="back" data-act="fr-back">‹ Voltar</button>
-    <div class="fhead">${fAvatar(p,true)}<div><h3>${esc(p.name||p.username)}</h3><p>${p.username?'@'+esc(p.username):''}</p></div></div>${body}
-    <div class="row">${r?`<button class="btn danger" data-act="fr-remove" data-fid="${r.id}" data-back="1">Remover amigo</button>`:''}</div>`;
+    <div class="profile"><div class="av" style="background:hsl(${hue(p.username||p.name)} 45% 36%);color:#fff">${ini}</div><div class="who"><h3>${esc(p.name||p.username)}</h3><p>${p.username?'@'+esc(p.username):''}</p></div></div>${body}
+    ${r?`<div class="box"><label class="lab">Amizade</label><div class="stats">Vocês veem os filmes assistidos e as notas um do outro.</div><button class="btn danger" data-act="fr-remove" data-fid="${r.id}" data-back="1">Remover amigo</button></div>`:''}`;
 }
 async function openFriend(uid){
   fr.view=uid;fr.movies=null;renderFriends();

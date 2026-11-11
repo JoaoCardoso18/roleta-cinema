@@ -315,7 +315,6 @@ label.check,label.cl{display:flex;align-items:center;gap:8px;cursor:pointer;font
 /* Amigos */
 .rt .dot{position:absolute;top:9px;left:30px;width:9px;height:9px;border-radius:50%;background:var(--accent);border:2px solid var(--surface)}
 .fav{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff;flex:none}
-.fav.lg{width:56px;height:56px;font:700 1.4rem var(--head)}
 .fsec{display:flex;flex-direction:column;gap:2px}
 .fsec>.lab{margin:4px 0 4px}
 .frow{display:flex;align-items:center;gap:12px;padding:8px;border-radius:10px;min-width:0}
@@ -325,9 +324,8 @@ button.frow:hover{background:var(--surface2)}
 .frow b{display:block;font-weight:500;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .frow span.sub{font-size:.78rem;color:var(--muted)}
 .frow .btn{padding:6px 11px;font-size:.8rem;flex:none}
-.fhead{display:flex;align-items:center;gap:14px}
-.fhead h3{font-size:1.2rem}
-.fhead p{margin:0;font-size:.85rem;color:var(--muted)}
+#frBody{display:flex;flex-direction:column;gap:14px}
+.fmv{display:flex;flex-direction:column;gap:2px;margin:0 -8px}
 .back{align-self:flex-start;background:none;border:0;color:var(--muted);font-family:inherit;font-size:.85rem;cursor:pointer;padding:4px 0}
 .back:hover{color:var(--fg)}
 
