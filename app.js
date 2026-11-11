@@ -388,6 +388,8 @@ function addMovie(o){
   addMsg();
   state.movies.unshift({id:uid(),title:o.title,color:randColor(),watched:false,rating:0,note:'',tmdb:o.tmdb||null});
   $('#newTitle').value='';$('#results').innerHTML='';refresh();
+  /* volta o cursor para a busca; no celular não, para o teclado não abrir sozinho */
+  if(matchMedia('(pointer:fine)').matches)$('#newTitle').focus();
 }
 let srchSeq=0,srchTimer=0;
 async function doSearch(auto){
