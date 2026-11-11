@@ -1,5 +1,5 @@
 /* Versão do site: atualizar a cada commit, junto com a tag (ver CLAUDE.md) */
-const VERSION='v0.0.43';
+const VERSION='v0.0.44';
 const FONT="Manrope,system-ui,sans-serif",KEY='roleta-cinema-v2', UIKEY='roleta-ui-v1', TAU=Math.PI*2, IMG='https://image.tmdb.org/t/p/';
 const $=s=>document.querySelector(s);
 const uid=()=>crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);});

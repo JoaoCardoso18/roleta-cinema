@@ -21,7 +21,7 @@ Publicado no GitHub Pages: https://joaocardoso18.github.io/roleta-cinema/ (repo 
 
 ## Nuvem (Supabase)
 
-- Projeto `https://xvggfgzeraxprtkvmrcp.supabase.co`; tabelas `movies`, `profiles`, `friendships` com RLS; funções `find_profile(q)` e `friend_movies(friend)` (security definer). Tudo em `schema.sql` e já aplicado em produção.
+- Projeto `https://xvggfgzeraxprtkvmrcp.supabase.co`; tabelas `movies`, `profiles`, `friendships` com RLS; funções `find_profile(q)`, `friend_movies(friend)` e `friend_wishlist(friend)` (security definer); coluna `profiles.share_wishlist`. Tudo em `schema.sql` e já aplicado em produção.
 - Login por e-mail e senha, **confirmação de e-mail desligada**; Site URL = a URL do GitHub Pages. "Esqueci minha senha" funciona por e-mail (link de recuperação).
 - Amigos: convite com aceite; o amigo vê os filmes assistidos e notas. **Comparar listas**: o amigo também vê a fila "Quero ver" se `profiles.share_wishlist` estiver ligado (interruptor no Perfil, padrão ligado), pela função `friend_wishlist(friend)`. A tela do amigo mostra 3 grupos (os dois querem ver / amigo viu e você quer / você viu e amigo quer) e o botão "Sortear um filme para ver juntos", que deixa a roleta só com os filmes em comum (variável `duo`, selo "Com fulano" no cabeçalho). Comparação pelo ID do TMDB.
 
@@ -39,6 +39,6 @@ Publicado no GitHub Pages: https://joaocardoso18.github.io/roleta-cinema/ (repo 
 
 ## Pendências e observações
 
+- O navegador embutido do app está logado no Supabase (conta do João, via GitHub): dá para rodar SQL pelo SQL Editor do projeto quando ele pedir.
 - O push usa o login do GitHub CLI (`gh`, conta `JoaoCardoso18`), configurado como credencial do git.
-- O bloco "Comparar listas com amigos" do `schema.sql` (coluna `share_wishlist` e função `friend_wishlist`) precisa ser rodado pelo João no SQL Editor do Supabase; confirmar quando estiver aplicado.
 - Recursos que dependem de rede (TMDB, e-mail, Supabase real) não foram testados em ambiente isolado; conferir no site publicado.
