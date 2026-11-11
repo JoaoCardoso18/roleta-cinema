@@ -42,6 +42,16 @@ body{
   -webkit-tap-highlight-color:transparent;
 }
 body.noscroll{overflow:hidden}
+
+/* Barras de rolagem nas cores do tema: fina, sem trilho, e na cor de destaque ao passar o mouse */
+:root{--sb:color-mix(in srgb,var(--fg) 24%,transparent);--sb-h:color-mix(in srgb,var(--accent) 75%,var(--fg))}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--sb);border-radius:99px;border:3px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:var(--sb-h);background-clip:padding-box}
+::-webkit-scrollbar-corner{background:transparent}
+::-webkit-scrollbar-button{display:none}
+@supports not selector(::-webkit-scrollbar){*{scrollbar-width:thin;scrollbar-color:var(--sb) transparent}}
 h2,h3{margin:0;font-family:var(--head)}
 a{color:var(--accent)}
 svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
