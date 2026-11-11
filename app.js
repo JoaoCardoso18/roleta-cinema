@@ -129,10 +129,13 @@ function fit(){
   document.querySelector('main').classList.toggle('side',side);
   const w=$('#stagewrap'),cs=getComputedStyle(w),pw=w.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),ph=w.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
   const cardW=Math.min(440,pw*.42),room=wide()?pw-cardW-56:pw;
-  if(ui.mode==='list'){fitReel();const r=$('#reelwrap');r.style.width=wide()?Math.floor(Math.min(520,room))+'px':'';r.style.transform=side?`translateX(${Math.max(0,(pw-r.offsetWidth)/2-8)}px)`:'';return;}
+  /* com o resultado aberto, a roleta (ou a faixa) fica no centro do espaço livre à direita do cartão */
+  const res=$('#res'),pl=parseFloat(cs.paddingLeft),cardR=res.offsetLeft+res.offsetWidth;
+  const shift=()=>side?Math.max(0,Math.round((cardR+pl+pw)/2-(pl+pw/2))):0;
+  if(ui.mode==='list'){fitReel();const r=$('#reelwrap');r.style.width=wide()?Math.floor(Math.min(520,room))+'px':'';r.style.transform=side?`translateX(${shift()}px)`:'';return;}
   const d=Math.max(160,Math.floor(Math.min(room,ph,720))),st=$('#stage');
   st.style.width=st.style.height=d+'px';
-  st.style.transform=side?`translateX(${Math.max(0,(pw-d)/2)}px)`:'';
+  st.style.transform=side?`translateX(${Math.min(shift(),Math.max(0,(pw-d)/2))}px)`:'';
   size();
 }
 function size(){const r=cv.getBoundingClientRect();if(r.width<10)return;const d=Math.min(window.devicePixelRatio||1,2.5);cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);draw();}
@@ -572,11 +575,36 @@ $('#exp').addEventListener('click',()=>{
   const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='roleta-cinema-backup.json';a.click();
 });
 $('#imp').addEventListener('click',()=>$('#file').click());
+/* Importar: o arquivo fica guardado até a pessoa escolher entre juntar e substituir */
+let impData=null,impArm=0;
+const impMsg=(t,k)=>{const el=$('#impMsg');el.textContent=t||'';el.className='hint'+(k?' '+k:'');};
+const isDupOf=m=>m.tmdb&&m.tmdb.id?!!(hasTmdb(m.tmdb.id)||state.movies.find(x=>!x.tmdb&&normT(x.title)===normT(m.title))):!!hasTitle(m.title);
+function impReset(){impData=null;clearTimeout(impArm);$('#impStep').hidden=true;$('#imp').hidden=false;const b=$('#impRep');delete b.dataset.armed;b.classList.remove('arm');b.textContent='Substituir minha lista';}
 $('#file').addEventListener('change',async e=>{
-  const f=e.target.files[0];if(!f)return;
-  try{const s=JSON.parse(await f.text());if(!Array.isArray(s.movies))throw 0;s.movies.forEach(m=>{if(!isUuid(m.id))m.id=uid();});state={...s,key:state.key};refresh();msg('Backup importado.');}
-  catch(err){msg('Arquivo de backup inválido.');}
-  e.target.value='';
+  const f=e.target.files[0];e.target.value='';if(!f)return;impReset();
+  try{const s=JSON.parse(await f.text());if(!Array.isArray(s.movies))throw 0;impData=s;}
+  catch(err){impMsg('Esse arquivo não é um backup da Roleta Cinema. Use um arquivo gerado pelo botão Exportar.','bad');return;}
+  const n=impData.movies.length,dup=impData.movies.filter(isDupOf).length,cur=state.movies.length;
+  $('#impInfo').textContent=`O arquivo tem ${n} filme${n===1?'':'s'}${dup?`, e ${dup===n?(n===1?'ele já está':'todos já estão'):dup+' já '+(dup===1?'está':'estão')} na sua lista`:''}. Juntar adiciona só os que faltam. Substituir apaga os ${cur} filme${cur===1?'':'s'} da sua lista atual${user?', inclusive na nuvem,':''} e deixa só os do arquivo.`;
+  impMsg();$('#imp').hidden=true;$('#impStep').hidden=false;
+});
+$('#impCancel').addEventListener('click',()=>{impReset();impMsg();});
+$('#impJoin').addEventListener('click',()=>{
+  if(!impData)return;let add=0,skip=0;
+  for(const m of impData.movies){
+    if(!m||!m.title)continue;
+    if(isDupOf(m)){skip++;continue;}
+    const c={...m};if(!isUuid(c.id)||byId(c.id))c.id=uid();
+    state.movies.push(c);add++;
+  }
+  impReset();refresh();
+  impMsg(add?`${add} filme${add===1?' adicionado':'s adicionados'}${skip?`, ${skip} já ${skip===1?'estava':'estavam'} na lista`:''}.`:'Nenhum filme novo: todos já estavam na sua lista.','ok');
+});
+$('#impRep').addEventListener('click',e=>{
+  const b=e.currentTarget;if(!impData)return;
+  if(!b.dataset.armed){b.dataset.armed=1;b.classList.add('arm');b.textContent='Clique de novo para substituir';impArm=setTimeout(()=>{delete b.dataset.armed;b.classList.remove('arm');b.textContent='Substituir minha lista';},3000);return;}
+  const s=impData;s.movies.forEach(m=>{if(!isUuid(m.id))m.id=uid();});state={...s,key:state.key};
+  impReset();refresh();impMsg(`Lista substituída pelos ${s.movies.length} filmes do backup.`,'ok');
 });
 
 /* ---------- Perfil (nome e usuário; a foto é a inicial do nome) ---------- */

@@ -188,8 +188,13 @@
         </div>
         <div class="box">
           <h2><svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg>Backup</h2>
-          <p>Exporte um backup da sua lista para guardar ou levar para outro aparelho.</p>
+          <p>Exporte um backup da sua lista para guardar ou levar para outro aparelho. Ao importar, você escolhe se os filmes do arquivo entram junto com os da sua lista ou se substituem a lista inteira.</p>
           <div class="row"><button class="btn" id="exp">Exportar</button><button class="btn" id="imp">Importar</button><input type="file" id="file" accept="application/json" hidden></div>
+          <div class="wipestep" id="impStep" hidden>
+            <p id="impInfo"></p>
+            <div class="row"><button class="btn pri" id="impJoin">Juntar com a minha lista</button><button class="btn danger" id="impRep">Substituir minha lista</button><button class="btn" id="impCancel">Cancelar</button></div>
+          </div>
+          <div class="hint" id="impMsg" role="status"></div>
         </div>
         <div class="box" id="wipebox">
           <h2><svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>Apagar filmes “Quero ver”</h2>
