@@ -1,5 +1,5 @@
 /* Versão do site: atualizar a cada commit, junto com a tag (ver CLAUDE.md) */
-const VERSION='v0.0.41';
+const VERSION='v0.0.42';
 const FONT="Manrope,system-ui,sans-serif",KEY='roleta-cinema-v2', UIKEY='roleta-ui-v1', TAU=Math.PI*2, IMG='https://image.tmdb.org/t/p/';
 const $=s=>document.querySelector(s);
 const uid=()=>crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);});
@@ -206,7 +206,7 @@ function spin(){
 }
 const lock=v=>{spinning=v;const off=v||!pool().length;btn.disabled=off;$('#spin2').disabled=off;};
 let lastFr=null;
-function finish(sl){const st=$('#stage');st.classList.remove('spinning');if(ui.mode!=='list'){void st.offsetWidth;st.classList.add('won');}lastId=sl.m.id;lastFr=sl.fr?sl.fr.id:null;renderResult(true);confetti();if(navigator.vibrate)try{navigator.vibrate(200)}catch(e){}}
+function finish(sl){const st=$(ui.mode==='list'?'#reel':'#stage');st.classList.remove('spinning');void st.offsetWidth;st.classList.add('won');lastId=sl.m.id;lastFr=sl.fr?sl.fr.id:null;renderResult(true);confetti();if(navigator.vibrate)try{navigator.vibrate(200)}catch(e){}}
 function go(){if(spinning)return;ui.mode==='list'?spinList():spin();}
 
 /* ---------- Modelo "Lista": a faixa desce e para no filme sorteado ---------- */
@@ -234,6 +234,7 @@ function renderIdleReel(){
 function spinList(){
   const P=slots();if(spinning||!P.length)return;
   lock(true);setBackdrop(null);$('#res').innerHTML=idle('Girando…',IC.film);
+  $('#reel').classList.remove('won');$('#reel').classList.add('spinning');
   const win=P[Math.floor(Math.random()*P.length)],L=Math.max(45,P.length*2),W=4,arr=[];let prev=null;
   for(let i=0;i<L;i++){let m;do{m=P[Math.floor(Math.random()*P.length)];}while(P.length>1&&prev&&m.key===prev.key);arr.push(m);prev=m;}
   arr[W]=win;

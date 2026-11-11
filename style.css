@@ -117,14 +117,14 @@ label.check,label.cl{display:flex;align-items:center;gap:8px;cursor:pointer;font
 /* Seta luminosa: triângulo dourado com miolo na cor de destaque e três luzes; as luzes piscam no giro e a seta brilha no resultado */
 .pointer{position:absolute;right:-9.3%;top:50%;transform:translateY(-50%);z-index:2;width:16%;aspect-ratio:1;pointer-events:none}
 .pointer svg{width:100%;height:100%;display:block;overflow:visible;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45))}
-.pointer .pb{fill:var(--gold);stroke:var(--rim);stroke-width:3;stroke-linejoin:round}
-.pointer .pi{fill:var(--accent)}
-.pointer .pl{fill:var(--gold);filter:drop-shadow(0 0 3px var(--gold))}
-.stage.spinning .pointer .pl{animation:plamp .33s steps(1) infinite}
-.stage.spinning .pointer .pl:nth-of-type(2){animation-delay:.11s}
-.stage.spinning .pointer .pl:nth-of-type(3){animation-delay:.22s}
+.pointer .pb,.rptr .pb{fill:var(--gold);stroke:var(--rim);stroke-width:3;stroke-linejoin:round}
+.pointer .pi,.rptr .pi{fill:var(--accent)}
+.pointer .pl,.rptr .pl{fill:var(--gold);filter:drop-shadow(0 0 3px var(--gold))}
+.stage.spinning .pointer .pl,.reel.spinning .rptr .pl{animation:plamp .33s steps(1) infinite}
+.stage.spinning .pointer .pl:nth-of-type(2),.reel.spinning .rptr .pl:nth-of-type(2){animation-delay:.11s}
+.stage.spinning .pointer .pl:nth-of-type(3),.reel.spinning .rptr .pl:nth-of-type(3){animation-delay:.22s}
 @keyframes plamp{0%{opacity:1}50%{opacity:.25}}
-.stage.won .pointer svg{animation:pglow .9s ease-in-out 3}
+.stage.won .pointer svg,.reel.won .rptr svg{animation:pglow .9s ease-in-out 3}
 @keyframes pglow{50%{filter:drop-shadow(0 0 12px var(--gold)) brightness(1.2)}}
 .hub{
   position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:21%;aspect-ratio:1;border-radius:50%;
@@ -323,7 +323,7 @@ label.check,label.cl{display:flex;align-items:center;gap:8px;cursor:pointer;font
 .reel::before{top:0;background:linear-gradient(var(--surface),transparent)}
 .reel::after{bottom:0;background:linear-gradient(transparent,var(--surface))}
 .strip{position:absolute;left:0;right:0;top:0;will-change:transform}
-.ri{height:68px;display:flex;align-items:center;gap:14px;padding:0 44px 0 20px}
+.ri{height:68px;display:flex;align-items:center;gap:14px;padding:0 68px 0 20px}
 .ri .rcv{width:38px;height:54px;border-radius:5px;overflow:hidden;flex:none;background:var(--surface2)}
 .ri .rcv img{width:100%;height:100%;object-fit:cover;display:block}
 .ri .rcv .ph{font-size:0}
@@ -332,7 +332,8 @@ label.check,label.cl{display:flex;align-items:center;gap:8px;cursor:pointer;font
 .ri span{font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
 .ri.none b{font-family:inherit;font-size:.95rem;color:var(--muted)}
 .hl{position:absolute;left:0;right:0;top:50%;height:68px;transform:translateY(-50%);border-top:2px solid var(--gold);border-bottom:2px solid var(--gold);background:color-mix(in srgb,var(--accent) 14%,transparent);z-index:1;pointer-events:none}
-.rptr{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:0;height:0;border-top:11px solid transparent;border-bottom:11px solid transparent;border-right:20px solid var(--accent);z-index:3;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+.rptr{position:absolute;right:2px;top:50%;transform:translateY(-50%);width:58px;height:58px;z-index:3;pointer-events:none}
+.rptr svg{width:100%;height:100%;display:block;overflow:visible;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45))}
 .big{padding:12px 44px;font-family:var(--head);font-weight:700;font-size:1.05rem;letter-spacing:.08em;border:3px solid var(--gold);border-radius:999px}
 .profile .who{flex:1;min-width:0}
 .edform .fld{display:flex;flex-direction:column;gap:6px}
