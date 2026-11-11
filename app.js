@@ -380,16 +380,21 @@ function addMovie(o){
   state.movies.unshift({id:uid(),title:o.title,color:randColor(),watched:false,rating:0,note:'',tmdb:o.tmdb||null});
   $('#newTitle').value='';$('#results').innerHTML='';refresh();
 }
-async function doSearch(){
-  const q=$('#newTitle').value.trim();if(!q)return;
-  if(!tkey()){addMovie({title:q});return;}
-  $('#results').innerHTML='<div class="stats">Buscando…</div>';
+let srchSeq=0,srchTimer=0;
+async function doSearch(auto){
+  clearTimeout(srchTimer);
+  const q=$('#newTitle').value.trim(),seq=++srchSeq;
+  if(!q){$('#results').innerHTML='';return;}
+  if(!tkey()){if(!auto)addMovie({title:q});return;}
+  if(!auto||!$('#results').querySelector('.rrow'))$('#results').innerHTML='<div class="stats">Buscando…</div>';
   try{
-    found=(await tm('/search/movie',{query:q})).results.slice(0,6);
+    const res=(await tm('/search/movie',{query:q})).results.slice(0,6);
+    if(seq!==srchSeq)return; /* chegou uma busca mais nova enquanto esta carregava */
+    found=res;
     $('#results').innerHTML=found.map((x,i)=>`<div class="rrow" data-act="pick" data-i="${i}">${x.poster_path?`<img src="${IMG}w154${x.poster_path}" alt="">`:'<div class="ph" style="--c:#444"></div>'}
       <div><b>${esc(x.title)}</b><div class="info">${esc((x.release_date||'').slice(0,4))}${x.original_title&&x.original_title!==x.title?' · '+esc(x.original_title):''}</div><div class="info">${esc((x.overview||'').slice(0,140))}${(x.overview||'').length>140?'…':''}</div></div></div>`).join('')
       +`<button class="btn" data-act="plain">Adicionar “${esc(q)}” sem dados</button>`;
-  }catch(e){$('#results').innerHTML=`<div class="stats">Erro na busca (${esc(e.message)}). Confira sua chave em Ajustes.</div><button class="btn" data-act="plain">Adicionar “${esc(q)}” sem dados</button>`;}
+  }catch(e){if(seq!==srchSeq)return;$('#results').innerHTML=`<div class="stats">Erro na busca (${esc(e.message)}). Confira sua chave em Ajustes.</div><button class="btn" data-act="plain">Adicionar “${esc(q)}” sem dados</button>`;}
 }
 
 /* ---------- Painel lateral ---------- */
@@ -480,8 +485,15 @@ document.addEventListener('keydown',e=>{
   if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('row-m')){e.preventDefault();e.target.click();}
 });
 $('#inc').addEventListener('change',e=>{state.incWatched=e.target.checked;refresh();});
-$('#addBtn').addEventListener('click',doSearch);
+$('#addBtn').addEventListener('click',()=>doSearch());
 $('#newTitle').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
+/* busca enquanto digita: espera uma pausa de 400 ms e pelo menos 2 letras */
+$('#newTitle').addEventListener('input',e=>{
+  clearTimeout(srchTimer);const q=e.target.value.trim();
+  if(!q){srchSeq++;$('#results').innerHTML='';return;}
+  if(q.length<2)return;
+  srchTimer=setTimeout(()=>doSearch(true),400);
+});
 $('#q').addEventListener('input',e=>{query=e.target.value;renderList();});
 $('#sort').addEventListener('change',e=>{sortBy=e.target.value;renderList();});
 $('#genre').addEventListener('change',e=>{genre=e.target.value;renderList();});
