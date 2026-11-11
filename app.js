@@ -376,7 +376,16 @@ function refresh(){save();refreshUI();}
 
 /* ---------- Adicionar / buscar ---------- */
 let found=[];
+IC.check='<svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+/* filme repetido: pelo ID do TMDB, ou pelo título ignorando maiúsculas e acentos */
+const normT=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+const hasTmdb=id=>state.movies.find(m=>m.tmdb&&m.tmdb.id===id);
+const hasTitle=t=>state.movies.find(m=>normT(m.title)===normT(t));
+const addMsg=t=>{const el=$('#addMsg');el.textContent=t||'';};
 function addMovie(o){
+  const dup=o.tmdb?hasTmdb(o.tmdb.id):hasTitle(o.title);
+  if(dup){addMsg(`“${dup.title}” já está na sua lista.`);return;}
+  addMsg();
   state.movies.unshift({id:uid(),title:o.title,color:randColor(),watched:false,rating:0,note:'',tmdb:o.tmdb||null});
   $('#newTitle').value='';$('#results').innerHTML='';refresh();
 }
@@ -391,8 +400,8 @@ async function doSearch(auto){
     const res=(await tm('/search/movie',{query:q})).results.slice(0,6);
     if(seq!==srchSeq)return; /* chegou uma busca mais nova enquanto esta carregava */
     found=res;
-    $('#results').innerHTML=found.map((x,i)=>`<div class="rrow" data-act="pick" data-i="${i}">${x.poster_path?`<img src="${IMG}w154${x.poster_path}" alt="">`:'<div class="ph" style="--c:#444"></div>'}
-      <div><b>${esc(x.title)}</b><div class="info">${esc((x.release_date||'').slice(0,4))}${x.original_title&&x.original_title!==x.title?' · '+esc(x.original_title):''}</div><div class="info">${esc((x.overview||'').slice(0,140))}${(x.overview||'').length>140?'…':''}</div></div></div>`).join('')
+    $('#results').innerHTML=found.map((x,i)=>{const dup=hasTmdb(x.id);return `<div class="rrow${dup?' dup':''}" ${dup?'aria-disabled="true"':`data-act="pick" data-i="${i}"`}>${x.poster_path?`<img src="${IMG}w154${x.poster_path}" alt="">`:'<div class="ph" style="--c:#444"></div>'}
+      <div><b>${esc(x.title)}</b><div class="info">${esc((x.release_date||'').slice(0,4))}${x.original_title&&x.original_title!==x.title?' · '+esc(x.original_title):''}</div><div class="info">${esc((x.overview||'').slice(0,140))}${(x.overview||'').length>140?'…':''}</div>${dup?`<span class="dtag">${IC.check}Já adicionado</span>`:''}</div></div>`;}).join('')
       +`<button class="btn" data-act="plain">Adicionar “${esc(q)}” sem dados</button>`;
   }catch(e){if(seq!==srchSeq)return;$('#results').innerHTML=`<div class="stats">Erro na busca (${esc(e.message)}). Confira sua chave em Ajustes.</div><button class="btn" data-act="plain">Adicionar “${esc(q)}” sem dados</button>`;}
 }
@@ -454,7 +463,7 @@ document.addEventListener('click',async e=>{
   if(act==='resetui'){ui.custom=seed(THEMES[0]);renderCgrid();applyUI();return;}
   if(act==='plain'){addMovie({title:$('#newTitle').value.trim()});return;}
   if(act==='pick'){
-    const x=found[+el.dataset.i];if(!x)return;$('#results').innerHTML='<div class="stats">Adicionando…</div>';
+    const x=found[+el.dataset.i];if(!x||hasTmdb(x.id))return;$('#results').innerHTML='<div class="stats">Adicionando…</div>';
     let d=null;try{d=await details(x.id);}catch(err){}
     addMovie({title:x.title,tmdb:d});return;}
   const m=byId(el.dataset.id);if(!m)return;
@@ -489,7 +498,7 @@ $('#addBtn').addEventListener('click',()=>doSearch());
 $('#newTitle').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
 /* busca enquanto digita: espera uma pausa de 400 ms e pelo menos 2 letras */
 $('#newTitle').addEventListener('input',e=>{
-  clearTimeout(srchTimer);const q=e.target.value.trim();
+  clearTimeout(srchTimer);addMsg();const q=e.target.value.trim();
   if(!q){srchSeq++;$('#results').innerHTML='';return;}
   if(q.length<2)return;
   srchTimer=setTimeout(()=>doSearch(true),400);
@@ -703,7 +712,7 @@ let sb=null,user=null,pushTimer=null,cloudIds=new Set(),pulledFor=null;
 const setSync=(t,k)=>{const el=$('#syncMsg');if(el){el.textContent=t;el.className='stats'+(k?' '+k:'');}};
 const toRow=(m,i)=>({id:m.id,user_id:user.id,pos:i,title:m.title,color:m.color,watched:!!m.watched,rating:m.rating||0,note:m.note||'',tmdb:m.tmdb||null,miss:!!m.miss});
 const fromRow=r=>({id:r.id,title:r.title,color:r.color,watched:r.watched,rating:r.rating,note:r.note||'',tmdb:r.tmdb||null,miss:r.miss});
-function schedulePush(){if(!sb||!user)return;clearTimeout(pushTimer);setSync('⏳ Salvando…');pushTimer=setTimeout(pushAll,800);}
+function schedulePush(){if(!sb||!user)return;clearTimeout(pushTimer);setSync('Salvando…');pushTimer=setTimeout(pushAll,800);}
 async function pushAll(){
   if(!sb||!user)return;
   try{
