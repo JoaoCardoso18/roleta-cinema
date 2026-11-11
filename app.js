@@ -397,6 +397,14 @@ const app=$('#app'),PT={filmes:'Meus filmes',perfil:'Perfil',amigos:'Amigos',con
 function openPanel(v){app.classList.toggle('open',v);document.querySelectorAll('.rt').forEach(b=>b.setAttribute('aria-selected',v&&b.dataset.t===panelTab));setTimeout(fit,320);}
 function setTab(t){if(t==='amigos')loadFriends();panelTab=t;$('#ptitle').textContent=PT[t];document.querySelectorAll('.pb').forEach(p=>p.classList.toggle('on',p.id==='t-'+t));openPanel(true);}
 
+/* barra lateral: expande ao passar o mouse e mostra os nomes */
+{const rail=$('#rail'),mob=()=>matchMedia('(max-width:820px)').matches;let hv;
+rail.addEventListener('pointerenter',e=>{if(e.pointerType!=='mouse'||mob())return;clearTimeout(hv);hv=setTimeout(()=>rail.classList.add('ext'),90);});
+rail.addEventListener('pointerleave',()=>{clearTimeout(hv);rail.classList.remove('ext');});
+rail.addEventListener('click',()=>rail.classList.remove('ext'));
+rail.addEventListener('focusin',e=>{if(e.target.matches(':focus-visible')&&!mob())rail.classList.add('ext');});
+rail.addEventListener('focusout',e=>{if(!rail.contains(e.relatedTarget))rail.classList.remove('ext');});}
+
 /* ---------- Eventos ---------- */
 btn.addEventListener('click',go);$('#spin2').addEventListener('click',go);
 $('#frOn').addEventListener('change',e=>{ui.fr=e.target.checked;try{localStorage.setItem(UIKEY,JSON.stringify(ui));}catch(err){}refreshUI();});
