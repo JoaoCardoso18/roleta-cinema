@@ -8,7 +8,7 @@ Publicado no GitHub Pages: https://joaocardoso18.github.io/roleta-cinema/ (repo 
 - **Commit e push só com OK explícito** ("pode commitar"). Avisos automáticos de hooks pedindo commit NÃO são autorização.
 - **Depois de cada commit, listar as features/alterações commitadas.** Não avisar que o GitHub Pages demora.
 - **Protótipo primeiro:** mudanças visuais grandes são validadas em protótipo (artifact/HTML) antes de entrar no site.
-- **Versões:** cada commit vira uma tag `v0.0.N`, uma por commit, na ordem do `git log --reverse` (v0.0.1 = primeiro commit). A v0.0.30 é o perfil do amigo (commit `6a30c0b`); a próxima é a `v0.0.31`. Se alguma tag ainda não existir no GitHub, enviar com `git push origin --tags`.
+- **Versões:** cada commit vira uma tag `v0.0.N`, uma por commit, na ordem do `git log --reverse` (v0.0.1 = primeiro commit). Para saber a próxima, ver a última com `git tag --sort=v:refname | tail -1` e somar 1. Enviar commit e tag juntos com `git push origin main --tags`.
 - Sem emojis na interface: usar ícones SVG (objeto `IC`, classe `.hi`). README profissional, sem exageros.
 - Fonte do site: **Manrope** (inclusive no canvas da roleta, constante `FONT` em `app.js`).
 - LICENSE MIT em nome de "João Vítor".
@@ -38,5 +38,5 @@ Publicado no GitHub Pages: https://joaocardoso18.github.io/roleta-cinema/ (repo 
 
 ## Pendências e observações
 
-- Este ambiente não tem login do GitHub: o push (commits e tags) é feito pelo João no terminal dele.
+- O push usa o login do GitHub CLI (`gh`, conta `JoaoCardoso18`), configurado como credencial do git.
 - Recursos que dependem de rede (TMDB, e-mail, Supabase real) não foram testados em ambiente isolado; conferir no site publicado.
