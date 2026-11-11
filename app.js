@@ -121,7 +121,20 @@ function slots(){
 /* ---------- Roleta ---------- */
 const cv=$('#c'),ctx=cv.getContext('2d'),btn=$('#spin');
 let rot=0,spinning=false,lastId=null,tick=0;
-function fit(){if(ui.mode==='list'){fitReel();return;}const w=$('#stagewrap'),cs=getComputedStyle(w),pw=w.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),ph=w.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom),d=Math.max(160,Math.floor(Math.min(pw,ph,720)));const st=$('#stage');st.style.width=st.style.height=d+'px';size();}
+/* No computador, o resultado fica à esquerda e a roleta vai para a direita.
+   O tamanho da roleta já é calculado para caber na direita, então não muda quando o resultado aparece. */
+const wide=()=>matchMedia('(min-width:821px)').matches;
+function fit(){
+  const side=wide()&&!!(lastId||!state.movies.length);
+  document.querySelector('main').classList.toggle('side',side);
+  const w=$('#stagewrap'),cs=getComputedStyle(w),pw=w.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),ph=w.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+  const cardW=Math.min(440,pw*.42),room=wide()?pw-cardW-56:pw;
+  if(ui.mode==='list'){fitReel();const r=$('#reelwrap');r.style.width=wide()?Math.floor(Math.min(520,room))+'px':'';r.style.transform=side?`translateX(${Math.max(0,(pw-r.offsetWidth)/2-8)}px)`:'';return;}
+  const d=Math.max(160,Math.floor(Math.min(room,ph,720))),st=$('#stage');
+  st.style.width=st.style.height=d+'px';
+  st.style.transform=side?`translateX(${Math.max(0,(pw-d)/2)}px)`:'';
+  size();
+}
 function size(){const r=cv.getBoundingClientRect();if(r.width<10)return;const d=Math.min(window.devicePixelRatio||1,2.5);cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);draw();}
 function draw(){
   const W=cv.width;if(W<20)return;
@@ -243,7 +256,7 @@ function setBackdrop(m){
 }
 async function ensureBackdrop(m){
   if(!m.tmdb||(m.tmdb.backdrop!==undefined&&m.tmdb.col!==undefined)||!tkey())return;
-  try{const d=await details(m.tmdb.id);m.tmdb=d;save();if(lastId===m.id&&!spinning)setBackdrop(m);renderModal();}catch(e){}
+  try{const d=await details(m.tmdb.id);m.tmdb=d;save();if(lastId===m.id&&!spinning){setBackdrop(m);renderResult();}renderModal();}catch(e){}
 }
 function frNote(c){
   const mem=state.movies.filter(x=>x.tmdb&&x.tmdb.col&&String(x.tmdb.col.id)===String(c.id)).sort((p,q)=>ordOf(p)-ordOf(q));
@@ -259,16 +272,19 @@ function renderResult(anim){
   const frBlock=(lastFr&&t&&t.col&&String(t.col.id)===String(lastFr))?frNote(t.col):'';
   $('#lastp').textContent=m.title+(t&&t.year?' ('+t.year+')':'');
   $('#res').innerHTML=`<div class="rc${anim?' reveal':''}">
+    ${t&&t.backdrop?`<div class="rban" style="background-image:url('${IMG}w780${t.backdrop}')"></div>`:''}
     ${t&&t.poster?`<img class="rposter" src="${IMG}w154${t.poster}" alt="Pôster de ${esc(m.title)}">`:''}
     <div class="rbody">
       <small class="kick">${frBlock?'Franquia '+esc(cleanCol(t.col.name))+' sorteada. Comece por…':'Hoje a sessão é…'}</small>
       <h2>${esc(m.title)}</h2>
-      ${t?`<div class="info">${esc(infoLine(t))}</div>`:''}${frBlock}
+      ${t?`<div class="info">${esc(infoLine(t))}</div>`:''}
     </div>
+    ${t&&t.overview?`<p class="rov">${esc(t.overview)}</p>`:''}${frBlock?`<div class="rfr">${frBlock}</div>`:''}
     <div class="racts">
       <button class="btn${m.watched?'':' pri'}" data-act="watch" data-id="${m.id}">${m.watched?'Desmarcar como assistido':'Marcar como assistido'}</button>
       <button class="btn" data-act="open" data-id="${m.id}">Detalhes</button>
     </div></div>`;
+  fit();
 }
 const renderPoolInfo=()=>{const n=pool().length;$('#poolInfo').textContent=`${n} filme${n===1?'':'s'} na roleta`;};
 function renderFbar(){
@@ -359,7 +375,7 @@ function renderProfile(){
   $('#mycode').textContent=friendCode();
   $('#pfSync').textContent=user?'Conectado como '+user.email:'Sem conta conectada.';
 }
-function renderIdleHint(){if(lastId||spinning)return;$('#res').innerHTML=state.movies.length?idle('Seu filme será…','?'):idle('Sua lista está vazia','Adicione seu primeiro filme');}
+function renderIdleHint(){if(lastId||spinning)return;$('#res').innerHTML=state.movies.length?idle('Seu filme será…','?'):idle('Sua lista está vazia','Adicione seu primeiro filme');fit();}
 function renderFrOffer(){
   const box=$('#frOffer');if(!box)return;
   const seen=new Set();let hit=null;
@@ -475,7 +491,7 @@ document.addEventListener('click',async e=>{
   else if(act==='del'){
     if(el.dataset.armed){
       state.movies=state.movies.filter(x=>x.id!==m.id);
-      if(lastId===m.id){lastId=null;$('#res').innerHTML=idle('Seu filme será…','?');}
+      if(lastId===m.id){lastId=null;$('#res').innerHTML=idle('Seu filme será…','?');fit();}
       closeModal();refresh();
     }else{
       const old=el.textContent;el.dataset.armed=1;el.classList.add('arm');el.textContent='Toque de novo para confirmar';
@@ -730,7 +746,7 @@ async function pullCloud(){
   if(error){setSync(error.message,'bad');return;}
   if(data.length){
     state.movies=data.map(fromRow);cloudIds=new Set(data.map(r=>r.id));
-    if(lastId&&!byId(lastId)){lastId=null;$('#res').innerHTML=idle('Seu filme será…','?');}
+    if(lastId&&!byId(lastId)){lastId=null;$('#res').innerHTML=idle('Seu filme será…','?');fit();}
     saveLocal();refreshUI();setSync('Lista sincronizada.','ok');
   }else{
     state.movies.forEach(m=>{if(!isUuid(m.id))m.id=uid();});
