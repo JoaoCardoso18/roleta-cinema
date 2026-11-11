@@ -19,23 +19,23 @@
   <main>
     <div class="bd" id="bd"></div>
     <header class="top">
-      <div class="brand">Roleta Cinema</div>
+      <div class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="6.5" r="1.6"/><circle cx="12" cy="17.5" r="1.6"/><circle cx="6.5" cy="12" r="1.6"/><circle cx="17.5" cy="12" r="1.6"/></svg>Roleta Cinema</div>
+      <div class="fbar" id="fbar">
+        <select id="fg" aria-label="Filtrar a roleta por gênero" hidden></select>
+        <label class="check"><input type="checkbox" id="inc"> Incluir já assistidos</label>
+        <button class="btn" id="fclr" hidden>Limpar filtros</button>
+        <span class="stats" id="poolInfo"></span>
+      </div>
       <div class="topr">
         <div class="seg" id="mode" role="group" aria-label="Modelo da roleta"><button data-m="wheel" aria-pressed="true">Roda</button><button data-m="list" aria-pressed="false">Lista</button></div>
         <button class="chip" id="loginChip" hidden></button>
       </div>
     </header>
-    <div class="fbar" id="fbar">
-      <select id="fg" aria-label="Filtrar a roleta por gênero" hidden></select>
-      <label class="check"><input type="checkbox" id="inc"> Incluir já assistidos</label>
-      <button class="btn" id="fclr" hidden>Limpar filtros</button>
-      <span class="stats" id="poolInfo"></span>
-    </div>
 
     <div class="arena" id="arena">
     <div class="stagewrap" id="stagewrap">
       <div class="stage" id="stage">
-        <div class="pointer"></div>
+        <div class="pointer" aria-hidden="true"><svg viewBox="0 0 100 100"><path class="pb" d="M6 50 L78 30 L78 70 Z"/><path class="pi" d="M20 50 L70 37 L70 63 Z"/><circle class="pl" cx="88" cy="34" r="4"/><circle class="pl" cx="90" cy="50" r="4"/><circle class="pl" cx="88" cy="66" r="4"/></svg></div>
         <canvas id="c" aria-label="Roleta de filmes"></canvas>
         <button class="hub" id="spin">GIRAR</button>
       </div>

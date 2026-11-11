@@ -1,5 +1,5 @@
 /* Versão do site: atualizar a cada commit, junto com a tag (ver CLAUDE.md) */
-const VERSION='v0.0.40';
+const VERSION='v0.0.41';
 const FONT="Manrope,system-ui,sans-serif",KEY='roleta-cinema-v2', UIKEY='roleta-ui-v1', TAU=Math.PI*2, IMG='https://image.tmdb.org/t/p/';
 const $=s=>document.querySelector(s);
 const uid=()=>crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);});
@@ -137,7 +137,7 @@ function fit(){
   if(ui.mode==='list'){fitReel();const r=$('#reelwrap');r.style.width=wide()?Math.floor(Math.min(520,room))+'px':'';r.style.transform=side?`translateX(${shift()}px)`:'';return;}
   const d=Math.max(160,Math.floor(Math.min(room,ph,720))),st=$('#stage');
   st.style.width=st.style.height=d+'px';
-  st.style.transform=side?`translateX(${Math.min(shift(),Math.max(0,(pw-d)/2))}px)`:'';
+  st.style.transform=side?`translateX(${Math.min(shift(),Math.max(0,(pw-d)/2-Math.max(0,d*.08-24)))}px)`:'';
   size();
 }
 function size(){const r=cv.getBoundingClientRect();if(r.width<10)return;const d=Math.min(window.devicePixelRatio||1,2.5);cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);draw();}
@@ -197,6 +197,7 @@ function spin(){
   const delta=((final-rot)%TAU+TAU)%TAU+TAU*(5+Math.floor(Math.random()*3));
   const start=rot,dur=5200+Math.random()*1200,t0=performance.now();
   setBackdrop(null);$('#res').innerHTML=idle('Girando…',IC.film);
+  $('#stage').classList.remove('won');$('#stage').classList.add('spinning');
   (function f(now){
     const p=Math.min((now-t0)/dur,1);rot=start+delta*(1-Math.pow(1-p,4));tick=Math.floor((now-t0)/110);draw();
     if(p<1)requestAnimationFrame(f);
@@ -205,7 +206,7 @@ function spin(){
 }
 const lock=v=>{spinning=v;const off=v||!pool().length;btn.disabled=off;$('#spin2').disabled=off;};
 let lastFr=null;
-function finish(sl){lastId=sl.m.id;lastFr=sl.fr?sl.fr.id:null;renderResult(true);confetti();if(navigator.vibrate)try{navigator.vibrate(200)}catch(e){}}
+function finish(sl){const st=$('#stage');st.classList.remove('spinning');if(ui.mode!=='list'){void st.offsetWidth;st.classList.add('won');}lastId=sl.m.id;lastFr=sl.fr?sl.fr.id:null;renderResult(true);confetti();if(navigator.vibrate)try{navigator.vibrate(200)}catch(e){}}
 function go(){if(spinning)return;ui.mode==='list'?spinList():spin();}
 
 /* ---------- Modelo "Lista": a faixa desce e para no filme sorteado ---------- */
