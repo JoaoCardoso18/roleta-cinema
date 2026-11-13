@@ -1,12 +1,14 @@
 /* Versão do site: atualizar a cada commit, junto com a tag (ver CLAUDE.md) */
-const VERSION='v0.0.44';
+const VERSION='v0.0.45';
 const FONT="Manrope,system-ui,sans-serif",KEY='roleta-cinema-v2', UIKEY='roleta-ui-v1', TAU=Math.PI*2, IMG='https://image.tmdb.org/t/p/';
 const $=s=>document.querySelector(s);
 const uid=()=>crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);});
 const isUuid=v=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 function hsl2hex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));const x=v=>Math.round(255*v).toString(16).padStart(2,'0');return '#'+x(f(0))+x(f(8))+x(f(4));}
+const reduceMotion=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
 const randColor=()=>hsl2hex(Math.floor(Math.random()*360),62,38);
 const txtColor=h=>{const n=parseInt(String(h).slice(1),16);return ((n>>16)*.299+((n>>8)&255)*.587+(n&255)*.114)>150?'#111':'#fff';};
+const NF1=new Intl.NumberFormat('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}),avgOf=a=>a.length?NF1.format(a.reduce((s,m)=>s+m.rating,0)/a.length):'–';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 
@@ -87,8 +89,8 @@ async function details(id){
 const infoLine=t=>t?[t.year,(t.genres||[]).slice(0,3).join(', '),t.runtime?t.runtime+' min':'',t.director?'Dir. '+t.director:'',t.vote?'TMDB ★ '+t.vote:''].filter(Boolean).join(' · '):'';
 
 /* ---------- Componentes ---------- */
-const posterImg=(m,w)=>m.tmdb&&m.tmdb.poster?`<img src="${IMG}${w}${m.tmdb.poster}" loading="lazy" alt="Pôster de ${esc(m.title)}">`:`<div class="ph" style="--c:${esc(m.color)};color:#fff"><span>${esc(m.title)}</span></div>`;
-function stars(id,v){let h='';for(let i=1;i<=5;i++)h+=`<button class="st${i<=v?' on':''}" data-act="star" data-id="${id}" data-v="${i}" aria-label="${i} estrelas">★</button>`;return h;}
+const posterImg=(m,w)=>m.tmdb&&m.tmdb.poster?`<img src="${IMG}${w}${m.tmdb.poster}" width="${w==='w500'?500:154}" height="${w==='w500'?750:231}" loading="lazy" alt="Pôster de ${esc(m.title)}">`:`<div class="ph" style="--c:${esc(m.color)};color:#fff"><span>${esc(m.title)}</span></div>`;
+function stars(id,v){let h='';for(let i=1;i<=5;i++)h+=`<button class="st${i<=v?' on':''}" data-act="star" data-id="${id}" data-v="${i}" aria-label="${i} ${i>1?'estrelas':'estrela'}" aria-pressed="${i===v}">★</button>`;return h;}
 const starsStatic=v=>v?`<span class="sst">${'★'.repeat(v)}<i>${'★'.repeat(5-v)}</i></span>`:'';
 const chips=t=>t&&t.genres&&t.genres.length?`<div class="chips">${t.genres.map(g=>`<span class="gc">${esc(g)}</span>`).join('')}</div>`:'';
 const IC={cloud:'<svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 010-8 5.5 5.5 0 0110.6 1.4A3.3 3.3 0 0117 18z"/></svg>',film:'<svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg>',trash:'<svg class="hi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>'};
@@ -178,7 +180,7 @@ function draw(){
   ctx.restore();
 }
 function confetti(){
-  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  if(reduceMotion())return;
   const c=document.createElement('canvas');c.className='confetti';c.width=innerWidth;c.height=innerHeight;document.body.appendChild(c);
   const x=c.getContext('2d'),cols=['#e0b84c','#c8102e','#ffffff','#8b5cf6','#22d3ee'];
   const ps=Array.from({length:90},()=>({x:c.width/2,y:c.height*.45,vx:(Math.random()-.5)*14,vy:Math.random()*-14-3,s:4+Math.random()*5,r:Math.random()*6,c:cols[Math.random()*cols.length|0]}));
@@ -195,7 +197,7 @@ function spin(){
   const a=TAU/n,idx=Math.floor(Math.random()*n),off=(Math.random()-.5)*a*.7;
   const final=-(idx+.5)*a+off;
   const delta=((final-rot)%TAU+TAU)%TAU+TAU*(5+Math.floor(Math.random()*3));
-  const start=rot,dur=5200+Math.random()*1200,t0=performance.now();
+  const start=rot,dur=reduceMotion()?400:5200+Math.random()*1200,t0=performance.now();
   setBackdrop(null);$('#res').innerHTML=idle('Girando…',IC.film);
   $('#stage').classList.remove('won');$('#stage').classList.add('spinning');
   (function f(now){
@@ -212,7 +214,7 @@ function go(){if(spinning)return;ui.mode==='list'?spinList():spin();}
 /* ---------- Modelo "Lista": a faixa desce e para no filme sorteado ---------- */
 const RH=68;
 const rowHTML=sl=>{const m=sl.m,t=m.tmdb,sub=sl.fr?sl.fr.mem.length+' filmes na roleta':[t&&t.year,t&&(t.genres||[]).slice(0,2).join(', ')].filter(Boolean).join(' · ');
-  return `<div class="ri"><div class="rcv">${t&&t.poster?`<img src="${IMG}w154${t.poster}" alt="">`:`<div class="ph" style="--c:${esc(m.color)}"></div>`}</div><div class="rtx"><b>${esc(sl.fr?'Franquia '+sl.fr.name:m.title)}</b>${sub?`<span>${esc(sub)}</span>`:''}</div></div>`;};
+  return `<div class="ri"><div class="rcv">${t&&t.poster?`<img src="${IMG}w154${t.poster}" width="154" height="231" loading="lazy" alt="">`:`<div class="ph" style="--c:${esc(m.color)}"></div>`}</div><div class="rtx"><b>${esc(sl.fr?'Franquia '+sl.fr.name:m.title)}</b>${sub?`<span>${esc(sub)}</span>`:''}</div></div>`;};
 const tyFor=i=>$('#reel').clientHeight/2-(i+.5)*RH;
 function fitReel(){
   if(ui.mode!=='list')return;
@@ -240,7 +242,7 @@ function spinList(){
   arr[W]=win;
   if(P.length>1)[W-1,W+1].forEach(j=>{while(arr[j].key===win.key)arr[j]=P[Math.floor(Math.random()*P.length)];});
   const st=$('#strip');st.innerHTML=arr.map(rowHTML).join('');
-  const from=tyFor(L-4),to=tyFor(W),t0=performance.now(),dur=(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)?300:5200;
+  const from=tyFor(L-4),to=tyFor(W),t0=performance.now(),dur=reduceMotion()?300:5200;
   st.style.transform=`translateY(${from}px)`;
   (function f(now){
     const p=Math.min(1,(now-t0)/dur),e=1-Math.pow(1-p,4);st.style.transform=`translateY(${from+(to-from)*e}px)`;
@@ -280,7 +282,7 @@ function renderResult(anim){
   $('#lastp').textContent=m.title+(t&&t.year?' ('+t.year+')':'');
   $('#res').innerHTML=`<div class="rc${anim?' reveal':''}">
     ${t&&t.backdrop?`<div class="rban" style="background-image:url('${IMG}w780${t.backdrop}')"></div>`:''}
-    ${t&&t.poster?`<img class="rposter" src="${IMG}w154${t.poster}" alt="Pôster de ${esc(m.title)}">`:''}
+    ${t&&t.poster?`<img class="rposter" src="${IMG}w154${t.poster}" width="154" height="231" fetchpriority="high" alt="Pôster de ${esc(m.title)}">`:''}
     <div class="rbody">
       <small class="kick">${frBlock?'Franquia '+esc(cleanCol(t.col.name))+' sorteada. Comece por…':(duo?'Sessão com '+esc(duo.name):'Hoje a sessão é…')}</small>
       <h2>${esc(m.title)}</h2>
@@ -317,7 +319,7 @@ function renderGenres(){
   $('#genre').innerHTML='<option value="">Todos os gêneros</option>'+gs.map(g=>`<option value="${esc(g)}"${g===genre?' selected':''}>${esc(g)}</option>`).join('');
 }
 function renderList(){
-  const rated=state.movies.filter(m=>m.rating>0),avg=rated.length?(rated.reduce((s,m)=>s+m.rating,0)/rated.length).toFixed(1):'–';
+  const rated=state.movies.filter(m=>m.rating>0),avg=avgOf(rated);
   $('#stats').textContent=`${state.movies.length} filmes · ${state.movies.filter(m=>m.watched).length} assistidos · média das notas: ${avg}`;
   renderGenres();
   const L=visible();
@@ -331,8 +333,10 @@ function renderList(){
 /* ---------- Detalhes (modal) ---------- */
 let openId=null;
 let mtab='info';
-function openModal(id){openId=id;mtab='info';renderModal();$('#modal').hidden=false;document.body.classList.add('noscroll');}
-function closeModal(){openId=null;$('#modal').hidden=true;document.body.classList.remove('noscroll');}
+let modalFrom=null;
+function openModal(id){if(!openId)modalFrom=document.activeElement;openId=id;mtab='info';renderModal();$('#modal').hidden=false;document.body.classList.add('noscroll');$('#app').inert=true;$('#modal .mx').focus();}
+function closeModal(){openId=null;$('#modal').hidden=true;document.body.classList.remove('noscroll');$('#app').inert=false;
+  if(modalFrom&&modalFrom.isConnected)modalFrom.focus();else{const m=modalFrom&&modalFrom.dataset&&modalFrom.dataset.id,el=m&&(document.querySelector(`#res [data-act="open"][data-id="${m}"]`)||(app.classList.contains('open')&&document.querySelector(`.row-m[data-id="${m}"]`)));if(el)el.focus();}modalFrom=null;}
 function franchiseTab(m){
   const c=m.tmdb&&m.tmdb.col;
   if(!c)return '<p class="stats">Este filme não faz parte de uma franquia no TMDB'+(m.tmdb?'.':', ou ainda não tem dados. Use Ajustes → Buscar dados de todos.')+'</p>';
@@ -348,12 +352,12 @@ function franchiseTab(m){
 }
 function renderModal(){
   if(!openId)return;const m=byId(openId);if(!m){closeModal();return;}const t=m.tmdb;
-  const tabs=`<div class="seg mtabs" role="tablist" aria-label="Seções dos detalhes"><button role="tab" data-act="mtab" data-t="info" aria-pressed="${mtab==='info'}">Detalhes</button><button role="tab" data-act="mtab" data-t="fr" aria-pressed="${mtab==='fr'}">Franquia</button></div>`;
+  const tabs=`<div class="seg mtabs" role="tablist" aria-label="Seções dos detalhes"><button role="tab" id="mtab-info" aria-controls="mpanel" data-act="mtab" data-t="info" aria-selected="${mtab==='info'}">Detalhes</button><button role="tab" id="mtab-fr" aria-controls="mpanel" data-act="mtab" data-t="fr" aria-selected="${mtab==='fr'}">Franquia</button></div>`;
   const info=`${chips(t)}
       ${t&&t.overview?`<p class="ov">${esc(t.overview)}</p>`:''}
       <div class="lbl">Sua nota</div><div>${stars(m.id,m.rating)}</div>
       <div class="lbl">Anotação</div>
-      <textarea data-act="note" data-id="${m.id}" maxlength="400" placeholder="O que você achou? Com quem assistiu?">${esc(m.note||'')}</textarea>
+      <textarea data-act="note" data-id="${m.id}" name="anotacao" aria-label="Anotação" maxlength="400" placeholder="O que você achou? Com quem assistiu?">${esc(m.note||'')}</textarea>
       <div class="row">
         <label class="check"><input type="checkbox" data-act="watchbox" data-id="${m.id}" ${m.watched?'checked':''}> Já assisti</label>
       </div>
@@ -361,10 +365,10 @@ function renderModal(){
   $('#mbody').innerHTML=`<div class="md">
     <div class="mp">${posterImg(m,'w500')}</div>
     <div class="mi">
-      <h2 class="mt">${esc(m.title)}</h2>
+      <h2 class="mt" id="mtitle">${esc(m.title)}</h2>
       <div class="info">${t?esc(infoLine(t)):'Sem dados do TMDB ainda (use Ajustes → Buscar dados de todos).'}</div>
       ${tabs}
-      ${mtab==='fr'?franchiseTab(m):info}
+      <div id="mpanel" class="mpanel" role="tabpanel" aria-labelledby="mtab-${mtab}">${mtab==='fr'?franchiseTab(m):info}</div>
     </div></div>`;
   if(mtab==='fr'&&t&&t.col&&!colCache[t.col.id]){const id=t.col.id;collectionInfo(id).then(()=>{if(openId===m.id&&mtab==='fr')renderModal();}).catch(()=>{});}
 }
@@ -375,7 +379,7 @@ function friendCode(){
 function renderProfile(){
   const d=state.movies.filter(m=>m.watched),rs=state.movies.filter(m=>m.rating>0);
   $('#k1').textContent=d.length;$('#k2').textContent=state.movies.length-d.length;
-  $('#k3').textContent=rs.length?(rs.reduce((s,m)=>s+m.rating,0)/rs.length).toFixed(1):'–';
+  $('#k3').textContent=avgOf(rs);
   const nm=pName(),un=pUser();
   $('#pfName').textContent=nm;$('#pfAv').textContent=(nm.trim().charAt(0)||'?').toUpperCase();
   $('#pfUser').textContent=un?'@'+un:(user?'Defina seu usuário':'Entre na conta para sincronizar');
@@ -426,15 +430,15 @@ async function doSearch(auto){
     const res=(await tm('/search/movie',{query:q})).results.slice(0,6);
     if(seq!==srchSeq)return; /* chegou uma busca mais nova enquanto esta carregava */
     found=res;
-    $('#results').innerHTML=found.map((x,i)=>{const dup=hasTmdb(x.id);return `<div class="rrow${dup?' dup':''}" ${dup?'aria-disabled="true"':`data-act="pick" data-i="${i}"`}>${x.poster_path?`<img src="${IMG}w154${x.poster_path}" alt="">`:'<div class="ph" style="--c:#444"></div>'}
-      <div><b>${esc(x.title)}</b><div class="info">${esc((x.release_date||'').slice(0,4))}${x.original_title&&x.original_title!==x.title?' · '+esc(x.original_title):''}</div><div class="info">${esc((x.overview||'').slice(0,140))}${(x.overview||'').length>140?'…':''}</div>${dup?`<span class="dtag">${IC.check}Já adicionado</span>`:''}</div></div>`;}).join('')
+    $('#results').innerHTML=found.map((x,i)=>{const dup=hasTmdb(x.id);return `<button type="button" class="rrow${dup?' dup':''}" ${dup?'disabled':`data-act="pick" data-i="${i}"`}>${x.poster_path?`<img src="${IMG}w154${x.poster_path}" width="154" height="231" loading="lazy" alt="">`:'<span class="ph" style="--c:#444"></span>'}
+      <span class="rtxt"><b>${esc(x.title)}</b><span class="info">${esc((x.release_date||'').slice(0,4))}${x.original_title&&x.original_title!==x.title?' · '+esc(x.original_title):''}</span><span class="info">${esc((x.overview||'').slice(0,140))}${(x.overview||'').length>140?'…':''}</span>${dup?`<span class="dtag">${IC.check}Já adicionado</span>`:''}</span></button>`;}).join('')
       +`<button class="btn" data-act="plain">Adicionar “${esc(q)}” sem dados</button>`;
   }catch(e){if(seq!==srchSeq)return;$('#results').innerHTML=`<div class="stats">Erro na busca (${esc(e.message)}). Confira sua chave em Ajustes.</div><button class="btn" data-act="plain">Adicionar “${esc(q)}” sem dados</button>`;}
 }
 
 /* ---------- Painel lateral ---------- */
 const app=$('#app'),PT={filmes:'Meus filmes',perfil:'Perfil',amigos:'Amigos',conta:'Conta',ajustes:'Ajustes'};let panelTab='filmes';
-function openPanel(v){app.classList.toggle('open',v);document.querySelectorAll('.rt').forEach(b=>b.setAttribute('aria-selected',v&&b.dataset.t===panelTab));setTimeout(fit,320);}
+function openPanel(v){app.classList.toggle('open',v);document.querySelectorAll('.rt').forEach(b=>{if(v&&b.dataset.t===panelTab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});setTimeout(fit,320);}
 function setTab(t){if(t==='amigos')loadFriends();panelTab=t;$('#ptitle').textContent=PT[t];document.querySelectorAll('.pb').forEach(p=>p.classList.toggle('on',p.id==='t-'+t));openPanel(true);}
 
 /* barra lateral: expande ao passar o mouse e mostra os nomes */
@@ -551,7 +555,7 @@ $('#enrich').addEventListener('click',async()=>{
   const todo=state.movies.filter(m=>(!m.tmdb&&!m.miss)||(m.tmdb&&(m.tmdb.backdrop===undefined||m.tmdb.col===undefined)));if(!todo.length){msg('Todos os filmes já têm dados.');return;}
   let n=0;$('#enrich').disabled=true;
   for(const m of todo){
-    msg(`Buscando ${++n}/${todo.length}: ${m.title}`);
+    msg(`Buscando ${++n}/${todo.length}: ${m.title}…`);
     try{if(m.tmdb)m.tmdb=await details(m.tmdb.id);else{const d=await tm('/search/movie',{query:m.title});if(d.results[0])m.tmdb=await details(d.results[0].id);else m.miss=true;}}
     catch(e){if(e.message==='401'){msg('Chave inválida ou sem permissão.');break;}}
     save();
@@ -737,7 +741,7 @@ function renderFriends(){
   box.innerHTML=h;
 }
 /* Comparação de listas: cruza pelo ID do TMDB (filmes "sem dados" ficam de fora) */
-const mvRow=(m,stars)=>{const t=m.tmdb;return `<div class="row-m"><div class="cv">${t&&t.poster?`<img src="${IMG}w154${t.poster}" alt="">`:`<div class="ph" style="--c:${esc(m.color)}"></div>`}</div><div class="tt"><b>${esc(m.title)}</b><span class="sub">${t&&t.year?esc(t.year):''}${stars||''}</span></div></div>`;};
+const mvRow=(m,stars)=>{const t=m.tmdb;return `<div class="row-m"><div class="cv">${t&&t.poster?`<img src="${IMG}w154${t.poster}" width="154" height="231" loading="lazy" alt="">`:`<div class="ph" style="--c:${esc(m.color)}"></div>`}</div><div class="tt"><b>${esc(m.title)}</b><span class="sub">${t&&t.year?esc(t.year):''}${stars||''}</span></div></div>`;};
 function compareLists(){
   const tid=m=>m.tmdb&&m.tmdb.id,mine=new Map(),mineW=new Map();
   state.movies.forEach(m=>{const i=tid(m);if(i)(m.watched?mineW:mine).set(i,m);});
@@ -750,17 +754,17 @@ function compareLists(){
 }
 function compareBox(p){
   const nm=esc(p.name||p.username);
-  if(fr.wishMissing)return `<div class="box"><label class="lab">Comparar listas</label><p class="stats">Para comparar listas, rode o bloco “Comparar listas com amigos” do schema.sql no Supabase e recarregue a página.</p></div>`;
-  if(fr.wish===null)return `<div class="box"><label class="lab">Comparar listas</label><div class="stats">Carregando…</div></div>`;
+  if(fr.wishMissing)return `<div class="box"><div class="lab">Comparar listas</div><p class="stats">Para comparar listas, rode o bloco “Comparar listas com amigos” do schema.sql no Supabase e recarregue a página.</p></div>`;
+  if(fr.wish===null)return `<div class="box"><div class="lab">Comparar listas</div><div class="stats">Carregando…</div></div>`;
   const c=compareLists(),hidden=fr.wishHidden,tabs=hidden?['he']:['both','he','me'];
   if(!tabs.includes(fr.cmpTab))fr.cmpTab=tabs[0];
   const L={both:'Os dois querem ver',he:`${nm} viu, você quer`,me:`Você viu, ${nm} quer`};
   const E={both:'Nenhum filme em comum na fila “Quero ver” ainda.',he:`Nenhum filme que ${nm} já viu está na sua fila.`,me:`Nenhum filme da fila de ${nm} você já assistiu.`};
   const list=c[fr.cmpTab],st=fr.cmpTab==='both'?()=>'':m=>starsStatic(m.rating);
-  return `<div class="box cmp"><label class="lab">Comparar listas</label>
+  return `<div class="box cmp"><div class="lab">Comparar listas</div>
     ${hidden?`<p class="stats">${nm} deixou a fila “Quero ver” privada. Aparecem só os filmes que já foram assistidos e estão na sua fila.</p>`:''}
-    <div class="ctabs" role="tablist">${tabs.map(k=>`<button role="tab" aria-selected="${k===fr.cmpTab}" data-act="fr-tab" data-t="${k}"><i>${c[k].length}</i>${L[k]}</button>`).join('')}</div>
-    ${list.length?`<div class="fmv">${list.map(m=>mvRow(m,st(m))).join('')}</div>`:`<div class="stats">${E[fr.cmpTab]}</div>`}
+    <div class="ctabs" role="tablist" aria-label="Comparar listas">${tabs.map(k=>`<button role="tab" id="ctab-${k}" aria-controls="cpanel" aria-selected="${k===fr.cmpTab}" data-act="fr-tab" data-t="${k}"><i>${c[k].length}</i>${L[k]}</button>`).join('')}</div>
+    <div id="cpanel" role="tabpanel" aria-labelledby="ctab-${fr.cmpTab}">${list.length?`<div class="fmv">${list.map(m=>mvRow(m,st(m))).join('')}</div>`:`<div class="stats">${E[fr.cmpTab]}</div>`}</div>
     ${hidden?'':`<button class="btn pri" data-act="duo" ${c.both.length?'':'disabled'}>${IC.film}Sortear um filme para ver juntos</button>`}
   </div>`;
 }
@@ -768,16 +772,16 @@ function renderFriendView(box){
   const u=fr.view,p=frP(u),r=fr.rows.find(x=>frPeer(x)===u),mv=fr.movies;
   let body='<div class="stats">Carregando…</div>';
   if(mv){
-    const rs=mv.filter(m=>m.rating>0),avg=rs.length?(rs.reduce((s,m)=>s+m.rating,0)/rs.length).toFixed(1):'–';
+    const rs=mv.filter(m=>m.rating>0),avg=avgOf(rs);
     const k2=fr.wish&&!fr.wishHidden?`<b>${fr.wish.length}</b><span>quer ver</span>`:`<b>${rs.length}</b><span>com nota</span>`;
     body=`<div class="grid3"><div class="kpi"><b>${mv.length}</b><span>assistidos</span></div><div class="kpi">${k2}</div><div class="kpi"><b>${avg}</b><span>nota média</span></div></div>
     ${compareBox(p)}
-    <div class="box"><label class="lab">Filmes assistidos</label>${mv.length?`<div class="fmv">${mv.map(m=>mvRow(m,starsStatic(m.rating))).join('')}</div>`:'<div class="stats">Ainda não assistiu nenhum filme.</div>'}</div>`;
+    <div class="box"><div class="lab">Filmes assistidos</div>${mv.length?`<div class="fmv">${mv.map(m=>mvRow(m,starsStatic(m.rating))).join('')}</div>`:'<div class="stats">Ainda não assistiu nenhum filme.</div>'}</div>`;
   }
   const ini=esc((p.name||p.username||'?').trim().charAt(0).toUpperCase());
   box.innerHTML=`<button class="back" data-act="fr-back">‹ Voltar</button>
     <div class="profile"><div class="av" style="background:hsl(${hue(p.username||p.name)} 45% 36%);color:#fff">${ini}</div><div class="who"><h3>${esc(p.name||p.username)}</h3><p>${p.username?'@'+esc(p.username):''}</p></div></div>${body}
-    ${r?`<div class="box"><label class="lab">Amizade</label><div class="stats">Vocês veem os filmes assistidos e as notas um do outro.</div><button class="btn danger" data-act="fr-remove" data-fid="${r.id}" data-back="1">Remover amigo</button></div>`:''}`;
+    ${r?`<div class="box"><div class="lab">Amizade</div><div class="stats">Vocês veem os filmes assistidos e as notas um do outro.</div><button class="btn danger" data-act="fr-remove" data-fid="${r.id}" data-back="1">Remover amigo</button></div>`:''}`;
 }
 async function openFriend(uid){
   fr.view=uid;fr.movies=null;fr.wish=null;fr.wishMissing=false;fr.wishHidden=false;fr.cmpTab='both';renderFriends();
@@ -831,6 +835,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&sb&&user&
 
 /* ---------- Nuvem (Supabase) ---------- */
 let sb=null,user=null,pushTimer=null,cloudIds=new Set(),pulledFor=null;
+const fieldErr=(id,t)=>{['#email','#pass'].forEach(s=>$(s).removeAttribute('aria-invalid'));const h=$('#authErr');if(h)h.textContent=t||'';if(id){$(id).setAttribute('aria-invalid','true');$(id).focus();}};
 const setSync=(t,k)=>{const el=$('#syncMsg');if(el){el.textContent=t;el.className='stats'+(k?' '+k:'');}};
 const toRow=(m,i)=>({id:m.id,user_id:user.id,pos:i,title:m.title,color:m.color,watched:!!m.watched,rating:m.rating||0,note:m.note||'',tmdb:m.tmdb||null,miss:!!m.miss});
 const fromRow=r=>({id:r.id,title:r.title,color:r.color,watched:r.watched,rating:r.rating,note:r.note||'',tmdb:r.tmdb||null,miss:r.miss});
@@ -866,7 +871,7 @@ function renderAuth(){
   const chip=$('#loginChip');chip.hidden=!sb;chip.innerHTML=IC.cloud+esc(user?user.email.split('@')[0]:'Entrar para sincronizar');renderProfile();
 }
 let authMode='in',authBusy=false,recovery=false;
-function setAuthMode(m){
+function setAuthMode(m){fieldErr(null);
   authMode=m;
   document.querySelectorAll('#authSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===m));
   $('#authGo').textContent=m==='up'?'Criar conta':'Entrar';
@@ -890,8 +895,9 @@ const authErr=e=>{
 async function authDo(){
   if(authBusy)return;
   const email=$('#email').value.trim(),password=$('#pass').value,kind=authMode;
-  if(!/^\S+@\S+\.\S+$/.test(email)){setSync('Informe um e-mail válido.','bad');$('#email').focus();return;}
-  if(password.length<6){setSync('A senha precisa ter pelo menos 6 caracteres.','bad');$('#pass').focus();return;}
+  if(!/^\S+@\S+\.\S+$/.test(email)){setSync('');fieldErr('#email','Informe um e-mail válido, como nome@email.com.');return;}
+  if(password.length<6){setSync('');fieldErr('#pass','A senha precisa ter pelo menos 6 caracteres.');return;}
+  fieldErr(null);
   authBusy=true;$('#authGo').disabled=true;setSync('Aguarde…');
   try{
     const {data,error}=await(kind==='up'?sb.auth.signUp({email,password}):sb.auth.signInWithPassword({email,password}));
@@ -913,9 +919,11 @@ if(window.supabase&&/^https:\/\//.test(window.SUPABASE_URL||'')&&window.SUPABASE
     if(!user){pulledFor=null;cloudIds=new Set();if(ev==='SIGNED_OUT'){setSync('Você saiu da conta.');prof={name:'',user:''};saveProf();renderProfile();fr={rows:[],prof:{},view:null,movies:null,missing:false,err:'',loaded:false};renderFriends();endDuo();}}
   });
   $('#authIn').addEventListener('submit',e=>{e.preventDefault();authDo();});
+  ['#email','#pass'].forEach(id=>$(id).addEventListener('input',()=>{if($(id).getAttribute('aria-invalid'))fieldErr(null);}));
   $('#forgot').addEventListener('click',async()=>{
     const email=$('#email').value.trim();
-    if(!/^\S+@\S+\.\S+$/.test(email)){setSync('Digite seu e-mail acima para receber o link.','bad');$('#email').focus();return;}
+    if(!/^\S+@\S+\.\S+$/.test(email)){setSync('');fieldErr('#email','Digite seu e-mail acima para receber o link.');return;}
+    fieldErr(null);
     $('#forgot').disabled=true;setSync('Enviando…');
     try{
       const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
